@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Budget Transparency</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502; --yellow:#FFD32A;
+    }
+    html { scroll-behavior:smooth; }
+    body { background:var(--navy); color:var(--white); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; }
+
+    /* NAV */
+    nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:rgba(7,17,31,0.95); border-bottom:1px solid var(--border); backdrop-filter:blur(18px); position:sticky; top:0; z-index:100; }
+    .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; letter-spacing:-.03em; color:var(--white); text-decoration:none; }
+    .logo span { color:var(--green); }
+    .nav-links { display:flex; align-items:center; gap:1.5rem; }
+    .nav-link { color:var(--muted); text-decoration:none; font-size:.85rem; transition:color .2s; }
+    .nav-link:hover { color:var(--white); }
+    .btn-report { background:var(--green); color:var(--navy); border:none; padding:.5rem 1.2rem; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:500; cursor:pointer; text-decoration:none; transition:all .2s; }
+    .btn-report:hover { background:var(--green2); transform:translateY(-1px); }
+
+    /* PAGE */
+    .page { max-width:1100px; margin:0 auto; padding:3rem 2rem 6rem; }
+
+    /* HEADER */
+    .page-header { margin-bottom:3rem; }
+    .page-tag { font-size:.75rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.7rem; }
+    .page-title { font-family:'Syne',sans-serif; font-size:2.2rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; max-width:600px; }
+    .page-sub { color:var(--muted); margin-top:.7rem; font-size:.95rem; line-height:1.6; max-width:550px; }
+
+    /* SUMMARY STATS */
+    .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:3rem; }
+    .summary-card { background:var(--navy2); border:1px solid var(--border); border-radius:16px; padding:1.3rem; position:relative; overflow:hidden; transition:all .3s; }
+    .summary-card:hover { transform:translateY(-2px); }
+    .summary-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .summary-card.green::before { background:linear-gradient(90deg,var(--green),transparent); }
+    .summary-card.red::before { background:linear-gradient(90deg,var(--red),transparent); }
+    .summary-card.orange::before { background:linear-gradient(90deg,var(--orange),transparent); }
+    .summary-card.blue::before { background:linear-gradient(90deg,#6699FF,transparent); }
+    .summary-icon { font-size:1.2rem; margin-bottom:.6rem; }
+    .summary-num { font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800; line-height:1; margin-bottom:.2rem; }
+    .summary-num.green { color:var(--green); }
+    .summary-num.red { color:var(--red); }
+    .summary-num.orange { color:var(--orange); }
+    .summary-num.blue { color:#6699FF; }
+    .summary-label { font-size:.75rem; color:var(--muted); line-height:1.3; }
+    .summary-source { font-size:.65rem; color:var(--muted); margin-top:.5rem; opacity:.6; }
+
+    /* SEARCH BAR */
+    .search-bar { background:var(--navy2); border:1px solid var(--border); border-radius:16px; padding:1.2rem 1.5rem; margin-bottom:2rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+    .search-input-wrap { flex:1; display:flex; align-items:center; gap:.6rem; background:var(--navy3); border:1px solid var(--border); border-radius:10px; padding:.65rem 1rem; min-width:200px; }
+    .search-input-wrap input { background:transparent; border:none; outline:none; color:var(--white); font-family:'DM Sans',sans-serif; font-size:.88rem; width:100%; }
+    .search-input-wrap input::placeholder { color:var(--muted); }
+    .search-filters { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .sf-btn { padding:.4rem .9rem; border-radius:100px; font-size:.75rem; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .sf-btn:hover { color:var(--white); border-color:rgba(255,255,255,.2); }
+    .sf-btn.active { background:var(--green); border-color:var(--green); color:var(--navy); font-weight:500; }
+
+    /* ROADS GRID */
+    .roads-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:1.2rem; margin-bottom:3rem; }
+
+    /* ROAD CARD */
+    .road-card { background:var(--navy2); border:1px solid var(--border); border-radius:20px; overflow:hidden; transition:all .3s; cursor:pointer; }
+    .road-card:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,.3); border-color:rgba(255,255,255,.1); }
+    .road-card.expanded { border-color:rgba(0,232,122,.25); }
+
+    .rc-header { padding:1.2rem 1.4rem; border-bottom:1px solid var(--border); }
+    .rc-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:.8rem; }
+    .rc-name { font-family:'Syne',sans-serif; font-size:.95rem; font-weight:700; letter-spacing:-.02em; line-height:1.2; }
+    .rc-type { font-size:.68rem; color:var(--muted); margin-top:.2rem; }
+    .vfm-pill { padding:.25rem .7rem; border-radius:100px; font-size:.7rem; font-weight:600; flex-shrink:0; margin-left:.5rem; }
+    .vfm-poor { background:rgba(255,71,87,.12); color:var(--red); border:1px solid rgba(255,71,87,.2); }
+    .vfm-average { background:rgba(255,165,2,.12); color:var(--orange); border:1px solid rgba(255,165,2,.2); }
+    .vfm-good { background:rgba(0,232,122,.12); color:var(--green); border:1px solid rgba(0,232,122,.2); }
+
+    .rc-meta { display:flex; gap:1rem; flex-wrap:wrap; }
+    .rc-meta-item { font-size:.72rem; color:var(--muted); }
+    .rc-meta-item strong { color:var(--white); font-weight:500; }
+
+    /* BUDGET BARS */
+    .rc-body { padding:1.2rem 1.4rem; }
+    .budget-row { margin-bottom:1rem; }
+    .budget-row:last-of-type { margin-bottom:0; }
+    .budget-row-label { display:flex; justify-content:space-between; font-size:.75rem; color:var(--muted); margin-bottom:.4rem; }
+    .budget-row-label strong { color:var(--white); font-weight:500; }
+    .bar-track { height:8px; background:rgba(255,255,255,.05); border-radius:4px; overflow:hidden; }
+    .bar-fill { height:100%; border-radius:4px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+    .bar-sanctioned { background:linear-gradient(90deg,#6699FF,#4477FF); }
+    .bar-spent { background:linear-gradient(90deg,var(--green),var(--green2)); }
+    .bar-gap { background:linear-gradient(90deg,var(--red),#FF8C94); }
+
+    /* REPORTS ROW */
+    .rc-footer { padding:.9rem 1.4rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .rc-reports { display:flex; align-items:center; gap:.5rem; font-size:.78rem; }
+    .reports-count { font-weight:600; color:var(--red); }
+    .rc-actions { display:flex; gap:.5rem; }
+    .rc-btn { padding:.3rem .8rem; border-radius:100px; font-size:.7rem; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .rc-btn:hover { color:var(--white); border-color:rgba(255,255,255,.2); }
+    .rc-btn.primary { background:rgba(0,232,122,.1); border-color:rgba(0,232,122,.2); color:var(--green); }
+
+    /* EXPANDED DETAIL */
+    .rc-detail { display:none; padding:0 1.4rem 1.4rem; border-top:1px solid var(--border); }
+    .rc-detail.visible { display:block; animation:fadeDown .3s ease; }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);} }
+
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:1rem; margin-top:1rem; }
+    .detail-item { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:.8rem; }
+    .detail-item-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+    .detail-item-val { font-size:.82rem; color:var(--white); font-weight:400; line-height:1.3; }
+    .detail-item-val.green { color:var(--green); }
+    .detail-item-val.red { color:var(--red); }
+    .detail-item-val.orange { color:var(--orange); }
+
+    .source-tag { display:inline-flex; align-items:center; gap:.3rem; background:rgba(102,153,255,.08); border:1px solid rgba(102,153,255,.15); color:#6699FF; padding:.25rem .7rem; border-radius:100px; font-size:.68rem; margin-top:.5rem; }
+
+    /* HALL OF SHAME */
+    .shame-section { margin-bottom:3rem; }
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.2rem; }
+    .section-title { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
+    .shame-list { background:var(--navy2); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+    .shame-item { display:flex; align-items:center; gap:1rem; padding:1rem 1.4rem; border-bottom:1px solid var(--border); transition:background .2s; }
+    .shame-item:last-child { border-bottom:none; }
+    .shame-item:hover { background:var(--card); }
+    .shame-rank { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; color:var(--red); width:32px; flex-shrink:0; opacity:.7; }
+    .shame-info { flex:1; }
+    .shame-name { font-size:.88rem; font-weight:500; color:var(--white); margin-bottom:.2rem; }
+    .shame-meta { font-size:.72rem; color:var(--muted); }
+    .shame-right { text-align:right; }
+    .shame-days { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; color:var(--red); }
+    .shame-days-label { font-size:.65rem; color:var(--muted); }
+    .shame-score { margin-top:.2rem; }
+
+    /* REVEAL */
+    .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s ease,transform .6s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+
+    /* CHATBOT */
+    .chatbot-btn { position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; border-radius:50%; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 8px 32px rgba(0,232,122,.35); z-index:9999; transition:all .3s; animation:float 3s ease-in-out infinite; }
+    .chatbot-btn:hover { transform:scale(1.1); }
+    @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);} }
+
+    @media(max-width:768px) {
+      .summary-grid { grid-template-columns:repeat(2,1fr); }
+      .detail-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html" class="logo">Road<span>Watch</span></a>
+    <div class="nav-links">
+      <a href="home.html" class="nav-link">🗺️ Map</a>
+      <a href="my-reports.html" class="nav-link">📋 My Reports</a>
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="report.html" class="btn-report">📸 Report</a>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="page-header reveal">
+      <div class="page-tag">Budget Watchdog</div>
+      <h1 class="page-title">Your tax money — finally visible.</h1>
+      <p class="page-sub">See exactly what was sanctioned, what was spent, who the contractor is, and whether the road actually got fixed. Powered by public government data.</p>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-grid reveal">
+      <div class="summary-card green">
+        <div class="summary-icon">💰</div>
+        <div class="summary-num green">₹47.3Cr</div>
+        <div class="summary-label">Total Sanctioned — Coimbatore Roads 2025-26</div>
+        <div class="summary-source">Source: openbudgetsindia.org</div>
+      </div>
+      <div class="summary-card orange">
+        <div class="summary-icon">📤</div>
+        <div class="summary-num orange">₹18.9Cr</div>
+        <div class="summary-label">Actually Spent So Far</div>
+        <div class="summary-source">Source: CCMC Annual Report 2025</div>
+      </div>
+      <div class="summary-card red">
+        <div class="summary-icon">❌</div>
+        <div class="summary-num red">₹28.4Cr</div>
+        <div class="summary-label">Unspent / Unaccounted Budget</div>
+        <div class="summary-source">Source: Calculated gap</div>
+      </div>
+      <div class="summary-card blue">
+        <div class="summary-icon">📍</div>
+        <div class="summary-num blue">209</div>
+        <div class="summary-label">Active Damage Reports Despite Spending</div>
+        <div class="summary-source">Source: RoadWatch community reports</div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-bar reveal">
+      <div class="search-input-wrap">
+        <span style="color:var(--muted);">🔍</span>
+        <input type="text" placeholder="Search any road in Coimbatore..." id="searchInput" oninput="filterRoads()"/>
+      </div>
+      <div class="search-filters">
+        <button class="sf-btn active" onclick="sfFilter('all',this)">All Roads</button>
+        <button class="sf-btn" onclick="sfFilter('poor',this)">🔴 Poor VFM</button>
+        <button class="sf-btn" onclick="sfFilter('nh',this)">National Highway</button>
+        <button class="sf-btn" onclick="sfFilter('municipal',this)">Municipal</button>
+        <button class="sf-btn" onclick="sfFilter('pwt',this)">PWD / State</button>
+      </div>
+    </div>
+
+    <!-- ROADS GRID -->
+    <div class="roads-grid reveal" id="roadsGrid"></div>
+
+    <!-- HALL OF SHAME -->
+    <div class="shame-section reveal">
+      <div class="section-header">
+        <div class="section-title">🏴 Hall of Shame — Money Spent, Roads Still Broken</div>
+        <div style="font-size:.78rem;color:var(--muted);">Sorted by days unresolved after budget spent</div>
+      </div>
+      <div class="shame-list">
+        <div class="shame-item">
+          <div class="shame-rank">#1</div>
+          <div class="shame-info">
+            <div class="shame-name">Ukkadam Bypass — ₹3.2Cr spent, 67 damage reports remain</div>
+            <div class="shame-meta">Contractor: Senthil Road Works · Last relayed: Jan 2022 · CCMC</div>
+          </div>
+          <div class="shame-right">
+            <div class="shame-days">847</div>
+            <div class="shame-days-label">days unresolved</div>
+            <div class="shame-score"><span style="background:rgba(255,71,87,.12);color:var(--red);border:1px solid rgba(255,71,87,.2);padding:.15rem .5rem;border-radius:100px;font-size:.65rem;font-weight:600;">VFM: 0.8/10</span></div>
+          </div>
+        </div>
+        <div class="shame-item">
+          <div class="shame-rank">#2</div>
+          <div class="shame-info">
+            <div class="shame-name">Palladam Road — ₹1.8Cr spent, 43 potholes still reported</div>
+            <div class="shame-meta">Contractor: ARS Infra · Last relayed: Mar 2022 · Highways Dept.</div>
+          </div>
+          <div class="shame-right">
+            <div class="shame-days">612</div>
+            <div class="shame-days-label">days unresolved</div>
+            <div class="shame-score"><span style="background:rgba(255,71,87,.12);color:var(--red);border:1px solid rgba(255,71,87,.2);padding:.15rem .5rem;border-radius:100px;font-size:.65rem;font-weight:600;">VFM: 1.2/10</span></div>
+          </div>
+        </div>
+        <div class="shame-item">
+          <div class="shame-rank">#3</div>
+          <div class="shame-info">
+            <div class="shame-name">Sathy Road — ₹2.1Cr spent, 38 active reports</div>
+            <div class="shame-meta">Contractor: Kumar Constructions · Last relayed: Jun 2022 · PWD</div>
+          </div>
+          <div class="shame-right">
+            <div class="shame-days">489</div>
+            <div class="shame-days-label">days unresolved</div>
+            <div class="shame-score"><span style="background:rgba(255,165,2,.12);color:var(--orange);border:1px solid rgba(255,165,2,.2);padding:.15rem .5rem;border-radius:100px;font-size:.65rem;font-weight:600;">VFM: 2.4/10</span></div>
+          </div>
+        </div>
+        <div class="shame-item">
+          <div class="shame-rank">#4</div>
+          <div class="shame-info">
+            <div class="shame-name">DB Road RS Puram — ₹0.9Cr spent, 31 waterlogging reports</div>
+            <div class="shame-meta">Contractor: City Drains Ltd. · Last relayed: Aug 2023 · CCMC</div>
+          </div>
+          <div class="shame-right">
+            <div class="shame-days">271</div>
+            <div class="shame-days-label">days unresolved</div>
+            <div class="shame-score"><span style="background:rgba(255,165,2,.12);color:var(--orange);border:1px solid rgba(255,165,2,.2);padding:.15rem .5rem;border-radius:100px;font-size:.65rem;font-weight:600;">VFM: 3.1/10</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="chatbot-btn" onclick="alert('RoadBot: Ask me about any road\'s budget!\nExample: \"How much was spent on Avinashi Road?\" 🤖')">🤖</button>
+
+  <script>
+    const roads = [
+      {
+        name:'Avinashi Road', fullName:'Avinashi Road — NH-544',
+        type:'National Highway', dept:'NHAI',
+        contractor:'Sri Murugan Infra Pvt. Ltd.',
+        relayDate:'January 2022', length:'14.2 km',
+        sanctioned:8.5, spent:3.2, reports:34,
+        vfm:2.1, vfmClass:'vfm-poor', vfmLabel:'Poor',
+        ee:'Project Director, NHAI Coimbatore',
+        source:'nhai.gov.in · Project ID: NH544-CBE-2021',
+        filter:'nh'
+      },
+      {
+        name:'DB Road', fullName:'DB Road — RS Puram',
+        type:'Municipal Road', dept:'CCMC',
+        contractor:'City Infra Solutions Pvt. Ltd.',
+        relayDate:'August 2023', length:'3.8 km',
+        sanctioned:1.4, spent:0.9, reports:31,
+        vfm:3.1, vfmClass:'vfm-average', vfmLabel:'Average',
+        ee:'Executive Engineer — CCMC Zone 2',
+        source:'ccmc.gov.in · Budget Code: CCMC-RD-2023-084',
+        filter:'municipal'
+      },
+      {
+        name:'Race Course Road', fullName:'Race Course Road',
+        type:'Municipal Road', dept:'CCMC',
+        contractor:'Raj Road Constructions',
+        relayDate:'March 2023', length:'2.1 km',
+        sanctioned:1.2, spent:1.1, reports:12,
+        vfm:7.8, vfmClass:'vfm-good', vfmLabel:'Good',
+        ee:'Executive Engineer — CCMC Zone 3',
+        source:'ccmc.gov.in · Budget Code: CCMC-RD-2023-047',
+        filter:'municipal'
+      },
+      {
+        name:'Trichy Road', fullName:'Trichy Road — NH-83',
+        type:'National Highway', dept:'NHAI',
+        contractor:'Larsen & Toubro Infra',
+        relayDate:'November 2021', length:'18.6 km',
+        sanctioned:12.3, spent:4.8, reports:47,
+        vfm:1.8, vfmClass:'vfm-poor', vfmLabel:'Poor',
+        ee:'Project Director, NHAI Coimbatore',
+        source:'nhai.gov.in · Project ID: NH83-CBE-2021',
+        filter:'nh'
+      },
+      {
+        name:'Mettupalayam Road', fullName:'Mettupalayam Road — SH-15',
+        type:'State Highway', dept:'PWD Tamil Nadu',
+        contractor:'TN Road Infra Corp.',
+        relayDate:'September 2022', length:'8.4 km',
+        sanctioned:3.6, spent:2.1, reports:22,
+        vfm:4.2, vfmClass:'vfm-average', vfmLabel:'Average',
+        ee:'EE — PWD Coimbatore Division',
+        source:'tnpwd.gov.in · File: PWD-CBE-SH15-2022',
+        filter:'pwt'
+      },
+      {
+        name:'Sathy Road', fullName:'Sathy Road — SH-20',
+        type:'State Highway', dept:'PWD Tamil Nadu',
+        contractor:'Kumar Constructions Pvt. Ltd.',
+        relayDate:'June 2022', length:'11.2 km',
+        sanctioned:4.8, spent:2.1, reports:38,
+        vfm:2.4, vfmClass:'vfm-poor', vfmLabel:'Poor',
+        ee:'EE — PWD Coimbatore Division',
+        source:'tnpwd.gov.in · File: PWD-CBE-SH20-2022',
+        filter:'pwt'
+      },
+    ];
+
+    let activeFilter = 'all';
+    let expandedRoad = null;
+
+    function getVfmColor(vfm) {
+      if (vfm >= 7) return 'var(--green)';
+      if (vfm >= 4) return 'var(--orange)';
+      return 'var(--red)';
+    }
+
+    function renderRoads(list) {
+      document.getElementById('roadsGrid').innerHTML = list.map((r,i) => `
+        <div class="road-card" id="rc-${i}" onclick="toggleRoad(${i})">
+          <div class="rc-header">
+            <div class="rc-top">
+              <div>
+                <div class="rc-name">${r.fullName}</div>
+                <div class="rc-type">${r.type} · ${r.dept} · ${r.length}</div>
+              </div>
+              <span class="vfm-pill ${r.vfmClass}">VFM ${r.vfm}/10</span>
+            </div>
+            <div class="rc-meta">
+              <div class="rc-meta-item">🏗️ <strong>${r.contractor}</strong></div>
+              <div class="rc-meta-item">📅 Last relayed: <strong>${r.relayDate}</strong></div>
+            </div>
+          </div>
+
+          <div class="rc-body">
+            <div class="budget-row">
+              <div class="budget-row-label">
+                <span>Sanctioned</span>
+                <strong>₹${r.sanctioned} Cr</strong>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-sanctioned" style="width:100%;"></div></div>
+            </div>
+            <div class="budget-row">
+              <div class="budget-row-label">
+                <span>Spent</span>
+                <strong style="color:${getVfmColor(r.vfm)};">₹${r.spent} Cr</strong>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-spent" style="width:${(r.spent/r.sanctioned*100).toFixed(0)}%;"></div></div>
+            </div>
+            <div class="budget-row">
+              <div class="budget-row-label">
+                <span>Unspent Gap</span>
+                <strong style="color:var(--red);">₹${(r.sanctioned-r.spent).toFixed(1)} Cr</strong>
+              </div>
+              <div class="bar-track"><div class="bar-fill bar-gap" style="width:${((r.sanctioned-r.spent)/r.sanctioned*100).toFixed(0)}%;"></div></div>
+            </div>
+          </div>
+
+          <div class="rc-footer">
+            <div class="rc-reports">
+              <span class="reports-count">🔴 ${r.reports}</span>
+              <span style="font-size:.72rem;color:var(--muted);">active damage reports</span>
+            </div>
+            <div class="rc-actions">
+              <button class="rc-btn" onclick="event.stopPropagation();shareRoad('${r.name}')">📤 Share</button>
+              <button class="rc-btn primary" onclick="event.stopPropagation();toggleRoad(${i})">🔍 Details</button>
+            </div>
+          </div>
+
+          <!-- EXPANDED -->
+          <div class="rc-detail ${expandedRoad===i?'visible':''}" id="rcd-${i}">
+            <div class="detail-grid">
+              <div class="detail-item">
+                <div class="detail-item-label">Executive Engineer</div>
+                <div class="detail-item-val">${r.ee}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item-label">Road Length</div>
+                <div class="detail-item-val">${r.length}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item-label">Spend Utilisation</div>
+                <div class="detail-item-val ${r.vfm>=7?'green':r.vfm>=4?'orange':'red'}">${(r.spent/r.sanctioned*100).toFixed(1)}% of budget used</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-item-label">Value for Money Score</div>
+                <div class="detail-item-val ${r.vfm>=7?'green':r.vfm>=4?'orange':'red'}">${r.vfm} / 10 — ${r.vfmLabel}</div>
+              </div>
+              <div class="detail-item" style="grid-column:span 2;">
+                <div class="detail-item-label">Data Source</div>
+                <div class="detail-item-val">📂 ${r.source}</div>
+                <div class="source-tag">🔗 Public Government Record</div>
+              </div>
+            </div>
+            <div style="background:rgba(255,71,87,.05);border:1px solid rgba(255,71,87,.15);border-radius:12px;padding:.9rem;margin-top:.5rem;">
+              <div style="font-size:.75rem;color:var(--muted);line-height:1.6;">
+                ⚠️ <strong style="color:var(--white);">Accountability Alert:</strong>
+                ₹${r.sanctioned}Cr was sanctioned for this road. Only ₹${r.spent}Cr
+                has been spent — yet <strong style="color:var(--red);">${r.reports} damage reports</strong> remain active.
+                ${r.vfm < 4 ? 'This road scores <strong style="color:var(--red);">Poor</strong> on Value for Money. Citizens and media are encouraged to raise RTI queries.' : 'Road quality being monitored by RoadWatch community.'}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `).join('');
+    }
+
+    function toggleRoad(i) {
+      if (expandedRoad === i) {
+        document.getElementById('rcd-'+i)?.classList.remove('visible');
+        document.getElementById('rc-'+i)?.classList.remove('expanded');
+        expandedRoad = null;
+      } else {
+        if (expandedRoad !== null) {
+          document.getElementById('rcd-'+expandedRoad)?.classList.remove('visible');
+          document.getElementById('rc-'+expandedRoad)?.classList.remove('expanded');
+        }
+        expandedRoad = i;
+        document.getElementById('rcd-'+i)?.classList.add('visible');
+        document.getElementById('rc-'+i)?.classList.add('expanded');
+      }
+    }
+
+    function sfFilter(filter, btn) {
+      activeFilter = filter;
+      document.querySelectorAll('.sf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      expandedRoad = null;
+      applyFilters();
+    }
+
+    function filterRoads() { applyFilters(); }
+
+    function applyFilters() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      let filtered = roads;
+      if (activeFilter === 'poor') filtered = roads.filter(r => r.vfm < 4);
+      if (activeFilter === 'nh') filtered = roads.filter(r => r.filter === 'nh');
+      if (activeFilter === 'municipal') filtered = roads.filter(r => r.filter === 'municipal');
+      if (activeFilter === 'pwt') filtered = roads.filter(r => r.filter === 'pwt');
+      if (query) filtered = filtered.filter(r => r.name.toLowerCase().includes(query) || r.contractor.toLowerCase().includes(query));
+      renderRoads(filtered);
+    }
+
+    function shareRoad(name) {
+      alert('📤 Link to ' + name + ' budget data copied!\nShare this to hold authorities accountable.');
+    }
+
+    // INIT
+    renderRoads(roads);
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(r => observer.observe(r));
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

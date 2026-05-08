@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502;
+    }
+    html, body { height:100%; }
+    body {
+      background:var(--navy);
+      color:var(--white);
+      font-family:'DM Sans',sans-serif;
+      font-weight:300;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* BACKGROUND */
+    .orb {
+      position:fixed; border-radius:50%;
+      filter:blur(90px); pointer-events:none;
+      opacity:.15; animation:drift 12s ease-in-out infinite alternate;
+    }
+    .orb-1 { width:500px; height:500px; background:var(--green); top:-150px; left:-100px; }
+    .orb-2 { width:400px; height:400px; background:#0055FF; bottom:-100px; right:-80px; animation-delay:-6s; }
+    @keyframes drift { from{transform:translate(0,0);}to{transform:translate(30px,20px);} }
+    .grid-bg {
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+      background-size:60px 60px;
+      pointer-events:none;
+    }
+
+    /* CARD */
+    .login-card {
+      position:relative; z-index:10;
+      width:100%; max-width:420px;
+      background:var(--navy2);
+      border:1px solid var(--border);
+      border-radius:28px;
+      padding:2.5rem;
+      box-shadow:0 30px 80px rgba(0,0,0,.5);
+      animation:cardIn .5s cubic-bezier(.34,1.56,.64,1);
+      margin:1rem;
+    }
+    @keyframes cardIn { from{opacity:0;transform:translateY(30px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);} }
+
+    /* LOGO */
+    .card-logo {
+      text-align:center;
+      margin-bottom:2rem;
+    }
+    .logo-text {
+      font-family:'Syne',sans-serif;
+      font-weight:800;
+      font-size:1.8rem;
+      letter-spacing:-.04em;
+      color:var(--white);
+    }
+    .logo-text span { color:var(--green); }
+    .logo-sub {
+      font-size:.78rem;
+      color:var(--muted);
+      margin-top:.3rem;
+    }
+
+    /* TABS */
+    .tabs {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      background:var(--navy3);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:.3rem;
+      margin-bottom:2rem;
+      gap:.2rem;
+    }
+    .tab-btn {
+      padding:.6rem;
+      border-radius:9px;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      font-family:'DM Sans',sans-serif;
+      font-size:.85rem;
+      font-weight:400;
+      cursor:pointer;
+      transition:all .25s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.4rem;
+    }
+    .tab-btn.active {
+      background:var(--navy2);
+      color:var(--white);
+      font-weight:500;
+      box-shadow:0 2px 8px rgba(0,0,0,.3);
+    }
+
+    /* FORMS */
+    .form-section { display:none; animation:fadeUp .3s ease; }
+    .form-section.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+
+    .form-title {
+      font-family:'Syne',sans-serif;
+      font-size:1.2rem;
+      font-weight:700;
+      letter-spacing:-.03em;
+      margin-bottom:.4rem;
+    }
+    .form-sub {
+      font-size:.82rem;
+      color:var(--muted);
+      margin-bottom:1.8rem;
+      line-height:1.5;
+    }
+
+    /* FIELDS */
+    .field { margin-bottom:1.2rem; }
+    .field label {
+      display:block;
+      font-size:.78rem;
+      color:var(--muted);
+      margin-bottom:.45rem;
+      font-weight:400;
+    }
+    .field label span { color:var(--green); }
+
+    .input-wrap {
+      display:flex;
+      align-items:center;
+      background:var(--navy3);
+      border:1px solid var(--border);
+      border-radius:12px;
+      transition:border-color .2s;
+      overflow:hidden;
+    }
+    .input-wrap:focus-within { border-color:rgba(0,232,122,.4); }
+    .input-prefix {
+      padding:.85rem 1rem;
+      font-size:.88rem;
+      color:var(--muted);
+      border-right:1px solid var(--border);
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+    .input-wrap input {
+      flex:1;
+      background:transparent;
+      border:none;
+      outline:none;
+      color:var(--white);
+      font-family:'DM Sans',sans-serif;
+      font-size:.9rem;
+      padding:.85rem 1rem;
+      font-weight:300;
+    }
+    .input-wrap input::placeholder { color:var(--muted); }
+
+    .field input[type="email"],
+    .field input[type="password"],
+    .field input[type="text"] {
+      width:100%;
+      background:var(--navy3);
+      border:1px solid var(--border);
+      border-radius:12px;
+      color:var(--white);
+      font-family:'DM Sans',sans-serif;
+      font-size:.9rem;
+      padding:.85rem 1rem;
+      outline:none;
+      transition:border-color .2s;
+      font-weight:300;
+    }
+    .field input:focus { border-color:rgba(0,232,122,.4); }
+    .field input::placeholder { color:var(--muted); }
+
+    /* AUTHORITY SELECTOR */
+    .authority-select {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:.5rem;
+      margin-bottom:1.2rem;
+    }
+    .auth-option {
+      background:var(--navy3);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:.8rem;
+      cursor:pointer;
+      transition:all .2s;
+      text-align:center;
+    }
+    .auth-option:hover { border-color:rgba(0,232,122,.2); }
+    .auth-option.selected {
+      border-color:var(--green);
+      background:rgba(0,232,122,.06);
+    }
+    .auth-option-icon { font-size:1.3rem; margin-bottom:.3rem; }
+    .auth-option-name { font-size:.75rem; color:var(--white); font-weight:500; line-height:1.3; }
+    .auth-option-type { font-size:.65rem; color:var(--muted); margin-top:.1rem; }
+
+    /* BUTTONS */
+    .btn-primary {
+      width:100%;
+      background:var(--green);
+      color:var(--navy);
+      border:none;
+      padding:1rem;
+      border-radius:12px;
+      font-family:'Syne',sans-serif;
+      font-size:.95rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .25s;
+      letter-spacing:-.01em;
+      margin-top:.5rem;
+    }
+    .btn-primary:hover {
+      background:var(--green2);
+      transform:translateY(-2px);
+      box-shadow:0 8px 30px rgba(0,232,122,.25);
+    }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+    .btn-ghost {
+      width:100%;
+      background:transparent;
+      color:var(--muted);
+      border:1px solid var(--border);
+      padding:.85rem;
+      border-radius:12px;
+      font-family:'DM Sans',sans-serif;
+      font-size:.88rem;
+      cursor:pointer;
+      transition:all .25s;
+      margin-top:.6rem;
+    }
+    .btn-ghost:hover { border-color:rgba(255,255,255,.2); color:var(--white); }
+
+    /* OTP SECTION */
+    .otp-section { display:none; animation:fadeUp .3s ease; }
+    .otp-section.active { display:block; }
+    .otp-inputs {
+      display:flex;
+      gap:.6rem;
+      justify-content:center;
+      margin:1.5rem 0;
+    }
+    .otp-input {
+      width:52px; height:56px;
+      background:var(--navy3);
+      border:2px solid var(--border);
+      border-radius:12px;
+      color:var(--white);
+      font-family:'Syne',sans-serif;
+      font-size:1.4rem;
+      font-weight:700;
+      text-align:center;
+      outline:none;
+      transition:border-color .2s;
+    }
+    .otp-input:focus { border-color:var(--green); }
+    .otp-input.filled { border-color:rgba(0,232,122,.4); background:rgba(0,232,122,.05); }
+
+    .resend-row {
+      text-align:center;
+      font-size:.78rem;
+      color:var(--muted);
+      margin-top:.8rem;
+    }
+    .resend-btn {
+      color:var(--green);
+      cursor:pointer;
+      background:none;
+      border:none;
+      font-family:inherit;
+      font-size:inherit;
+      padding:0;
+    }
+    .resend-btn:hover { text-decoration:underline; }
+
+    /* SUCCESS */
+    .success-section { display:none; text-align:center; animation:fadeUp .4s ease; }
+    .success-section.active { display:block; }
+    .success-circle {
+      width:80px; height:80px;
+      border-radius:50%;
+      background:rgba(0,232,122,.15);
+      border:2px solid var(--green);
+      display:flex; align-items:center; justify-content:center;
+      font-size:2rem; margin:0 auto 1.2rem;
+      animation:popIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from{transform:scale(0);}to{transform:scale(1);} }
+    .success-title {
+      font-family:'Syne',sans-serif;
+      font-size:1.3rem;
+      font-weight:700;
+      margin-bottom:.4rem;
+    }
+    .success-sub { color:var(--muted); font-size:.85rem; margin-bottom:1.5rem; line-height:1.5; }
+
+    /* DIVIDER */
+    .divider {
+      display:flex; align-items:center; gap:.8rem;
+      margin:1.2rem 0;
+    }
+    .divider-line { flex:1; height:1px; background:var(--border); }
+    .divider-text { font-size:.72rem; color:var(--muted); }
+
+    /* FOOTER */
+    .card-footer {
+      text-align:center;
+      margin-top:1.5rem;
+      font-size:.75rem;
+      color:var(--muted);
+      line-height:1.6;
+    }
+    .card-footer a { color:var(--green); text-decoration:none; }
+    .card-footer a:hover { text-decoration:underline; }
+
+    /* TIMER */
+    .timer {
+      font-family:'Syne',sans-serif;
+      font-size:.9rem;
+      font-weight:700;
+      color:var(--green);
+    }
+
+    /* INFO BOX */
+    .info-box {
+      background:rgba(0,232,122,.05);
+      border:1px solid rgba(0,232,122,.15);
+      border-radius:12px;
+      padding:.8rem 1rem;
+      margin-bottom:1.2rem;
+      font-size:.78rem;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    .info-box strong { color:var(--white); }
+  </style>
+</head>
+<body>
+
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="login-card">
+
+    <!-- LOGO -->
+    <div class="card-logo">
+      <div class="logo-text">Road<span>Watch</span></div>
+      <div class="logo-sub">AI-Powered Road Safety Platform · Coimbatore</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-citizen" onclick="switchTab('citizen')">
+        👤 Citizen
+      </button>
+      <button class="tab-btn" id="tab-authority" onclick="switchTab('authority')">
+        🏛️ Authority
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- CITIZEN FORM -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="form-section active" id="citizen-form">
+
+      <!-- PHONE INPUT STEP -->
+      <div id="citizen-phone-step">
+        <div class="form-title">Welcome back 👋</div>
+        <div class="form-sub">Enter your phone number to receive a verification code.</div>
+
+        <div class="field">
+          <label>Phone Number <span>*</span></label>
+          <div class="input-wrap">
+            <div class="input-prefix">🇮🇳 +91</div>
+            <input
+              type="tel"
+              id="citizen-phone"
+              placeholder="98765 43210"
+              maxlength="10"
+              oninput="validatePhone()"
+            />
+          </div>
+        </div>
+
+        <button class="btn-primary" id="send-otp-btn" onclick="sendOTP()" disabled>
+          Send OTP →
+        </button>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <div class="divider-text">or</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <button class="btn-ghost" onclick="guestLogin()">
+          Continue as Guest 👀
+        </button>
+      </div>
+
+      <!-- OTP STEP -->
+      <div class="otp-section" id="citizen-otp-step">
+        <div class="form-title">Enter OTP 🔐</div>
+        <div class="form-sub" id="otp-sub-text">
+          We sent a 6-digit code to <strong style="color:var(--white);">+91 XXXXXXXXXX</strong>
+        </div>
+
+        <div class="otp-inputs">
+          <input class="otp-input" type="text" maxlength="1" id="otp1" oninput="otpInput(this,null,'otp2')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp2" oninput="otpInput(this,'otp1','otp3')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp3" oninput="otpInput(this,'otp2','otp4')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp4" oninput="otpInput(this,'otp3','otp5')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp5" oninput="otpInput(this,'otp4','otp6')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp6" oninput="otpInput(this,'otp5',null)"/>
+        </div>
+
+        <button class="btn-primary" id="verify-otp-btn" onclick="verifyOTP()">
+          Verify & Login →
+        </button>
+
+        <div class="resend-row">
+          Didn't receive? <span class="timer" id="timer">0:30</span>
+          <button class="resend-btn" id="resend-btn" style="display:none;" onclick="resendOTP()">
+            Resend OTP
+          </button>
+        </div>
+
+        <button class="btn-ghost" onclick="backToPhone()" style="margin-top:.8rem;">
+          ← Change Number
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- AUTHORITY FORM -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="form-section" id="authority-form">
+
+      <div class="form-title">Authority Portal 🏛️</div>
+      <div class="form-sub">Login with your official government credentials to access the complaint dashboard.</div>
+
+      <div class="info-box">
+        🔒 <strong>Secure Access Only.</strong> This portal is for verified government officials from NHAI, PWD, CCMC, and Highways Department. Unauthorized access is prohibited.
+      </div>
+
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.8rem;">Select your department:</div>
+      <div class="authority-select">
+        <div class="auth-option selected" id="opt-ccmc" onclick="selectAuthority('ccmc')">
+          <div class="auth-option-icon">🏙️</div>
+          <div class="auth-option-name">CCMC</div>
+          <div class="auth-option-type">Municipal Corp.</div>
+        </div>
+        <div class="auth-option" id="opt-nhai" onclick="selectAuthority('nhai')">
+          <div class="auth-option-icon">🛣️</div>
+          <div class="auth-option-name">NHAI</div>
+          <div class="auth-option-type">National Highways</div>
+        </div>
+        <div class="auth-option" id="opt-pwd" onclick="selectAuthority('pwd')">
+          <div class="auth-option-icon">🏗️</div>
+          <div class="auth-option-name">PWD Tamil Nadu</div>
+          <div class="auth-option-type">State Highways</div>
+        </div>
+        <div class="auth-option" id="opt-highways" onclick="selectAuthority('highways')">
+          <div class="auth-option-icon">🚦</div>
+          <div class="auth-option-name">TN Highways</div>
+          <div class="auth-option-type">District Roads</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Official Email <span>*</span></label>
+        <input type="email" id="auth-email" placeholder="ee.zone3@ccmc.gov.in"/>
+      </div>
+
+      <div class="field">
+        <label>Password <span>*</span></label>
+        <input type="password" id="auth-password" placeholder="Enter your password"/>
+      </div>
+
+      <button class="btn-primary" onclick="authorityLogin()">
+        Login to Dashboard →
+      </button>
+
+      <div style="text-align:center;margin-top:.8rem;font-size:.75rem;color:var(--muted);">
+        Forgot password? Contact your department IT admin.
+      </div>
+
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- SUCCESS -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="success-section" id="success-section">
+      <div class="success-circle" id="success-icon">✅</div>
+      <div class="success-title" id="success-title">Login Successful!</div>
+      <div class="success-sub" id="success-sub">Welcome to RoadWatch. Redirecting you now...</div>
+      <div style="
+        background:var(--navy3);
+        border:1px solid var(--border);
+        border-radius:12px;
+        padding:1rem;
+        margin-bottom:1.2rem;
+      ">
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.3rem;">Logged in as</div>
+        <div style="font-size:.9rem;font-weight:500;" id="success-user">Road Guardian</div>
+        <div style="font-size:.72rem;color:var(--green);margin-top:.2rem;" id="success-role">Citizen · Coimbatore</div>
+      </div>
+      <button class="btn-primary" id="success-btn" onclick="redirect()">
+        Continue →
+      </button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="card-footer">
+      By continuing you agree to RoadWatch's
+      <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.<br/>
+      Built for IIT Madras Road Safety Hackathon 2026
+    </div>
+
+  </div>
+
+  <script>
+    let currentTab       = 'citizen';
+    let selectedDept     = 'ccmc';
+    let phoneNumber      = '';
+    let timerInterval    = null;
+
+    // ── TAB SWITCH ─────────────────────────────
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById(tab + '-form').classList.add('active');
+      document.getElementById('success-section').classList.remove('active');
+    }
+
+    // ── PHONE VALIDATION ───────────────────────
+    function validatePhone() {
+      const phone = document.getElementById('citizen-phone').value;
+      const btn   = document.getElementById('send-otp-btn');
+      btn.disabled = phone.length !== 10 || !/^\d+$/.test(phone);
+    }
+
+    // ── SEND OTP ───────────────────────────────
+    function sendOTP() {
+      phoneNumber = document.getElementById('citizen-phone').value;
+      const btn   = document.getElementById('send-otp-btn');
+
+      btn.textContent = 'Sending...';
+      btn.disabled    = true;
+
+      // Simulate OTP send (real: Supabase Auth)
+      setTimeout(() => {
+        document.getElementById('citizen-phone-step').style.display = 'none';
+        document.getElementById('citizen-otp-step').classList.add('active');
+        document.getElementById('otp-sub-text').innerHTML =
+          `We sent a 6-digit code to <strong style="color:var(--white);">+91 ${phoneNumber}</strong>`;
+        document.getElementById('otp1').focus();
+        startTimer(30);
+        btn.textContent = 'Send OTP →';
+        btn.disabled    = false;
+      }, 1200);
+    }
+
+    // ── OTP INPUT NAVIGATION ───────────────────
+    function otpInput(el, prevId, nextId) {
+      el.classList.toggle('filled', el.value !== '');
+      if (el.value && nextId) document.getElementById(nextId).focus();
+      if (!el.value && prevId) document.getElementById(prevId).focus();
+      checkOTPComplete();
+    }
+
+    function checkOTPComplete() {
+      const otp = ['otp1','otp2','otp3','otp4','otp5','otp6']
+        .map(id => document.getElementById(id).value).join('');
+      document.getElementById('verify-otp-btn').disabled = otp.length < 6;
+    }
+
+    // ── VERIFY OTP ─────────────────────────────
+    function verifyOTP() {
+      const otp = ['otp1','otp2','otp3','otp4','otp5','otp6']
+        .map(id => document.getElementById(id).value).join('');
+      const btn = document.getElementById('verify-otp-btn');
+
+      btn.textContent = 'Verifying...';
+      btn.disabled    = true;
+
+      // Simulate verification (real: Supabase Auth)
+      setTimeout(() => {
+        clearInterval(timerInterval);
+        showSuccess(
+          '🎉',
+          'Welcome to RoadWatch!',
+          'Your phone has been verified. You are now logged in as a Road Guardian.',
+          `+91 ${phoneNumber}`,
+          'Citizen · Coimbatore',
+          'index.html'
+        );
+      }, 1500);
+    }
+
+    // ── GUEST LOGIN ────────────────────────────
+    function guestLogin() {
+      showSuccess(
+        '👀',
+        'Continuing as Guest',
+        'You can explore RoadWatch. Sign up to file reports and earn points!',
+        'Guest User',
+        'Visitor · Read Only',
+        'index.html'
+      );
+    }
+
+    // ── AUTHORITY LOGIN ────────────────────────
+    function authorityLogin() {
+      const email    = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+
+      if (!email || !password) {
+        alert('Please enter your email and password!');
+        return;
+      }
+
+      const deptNames = {
+        ccmc:     'Coimbatore City Municipal Corp.',
+        nhai:     'NHAI — Coimbatore Division',
+        pwd:      'PWD Tamil Nadu',
+        highways: 'TN Highways Department'
+      };
+
+      const btn = document.querySelector('#authority-form .btn-primary');
+      btn.textContent = 'Logging in...';
+      btn.disabled    = true;
+
+      // Simulate auth (real: Supabase Auth)
+      setTimeout(() => {
+        showSuccess(
+          '🏛️',
+          'Authority Login Successful!',
+          'Welcome to the RoadWatch Authority Dashboard. Redirecting...',
+          email,
+          `Executive Engineer · ${deptNames[selectedDept]}`,
+          'admin.html'
+        );
+        btn.textContent = 'Login to Dashboard →';
+        btn.disabled    = false;
+      }, 1500);
+    }
+
+    // ── SELECT AUTHORITY DEPT ──────────────────
+    function selectAuthority(dept) {
+      selectedDept = dept;
+      document.querySelectorAll('.auth-option').forEach(o => o.classList.remove('selected'));
+      document.getElementById('opt-' + dept).classList.add('selected');
+    }
+
+    // ── SHOW SUCCESS ───────────────────────────
+    function showSuccess(icon, title, sub, user, role, redirectUrl) {
+      document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+      document.querySelectorAll('.otp-section').forEach(f => f.classList.remove('active'));
+
+      document.getElementById('success-icon').textContent   = icon;
+      document.getElementById('success-title').textContent  = title;
+      document.getElementById('success-sub').textContent    = sub;
+      document.getElementById('success-user').textContent   = user;
+      document.getElementById('success-role').textContent   = role;
+      document.getElementById('success-btn').dataset.url    = redirectUrl;
+      document.getElementById('success-section').classList.add('active');
+    }
+
+    function redirect() {
+      const url = document.getElementById('success-btn').dataset.url || 'index.html';
+      window.location.href = url;
+    }
+
+    // ── TIMER ──────────────────────────────────
+    function startTimer(seconds) {
+      let remaining = seconds;
+      const timerEl  = document.getElementById('timer');
+      const resendEl = document.getElementById('resend-btn');
+
+      timerEl.style.display  = 'inline';
+      resendEl.style.display = 'none';
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        remaining--;
+        timerEl.textContent = `0:${remaining < 10 ? '0' : ''}${remaining}`;
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          timerEl.style.display  = 'none';
+          resendEl.style.display = 'inline';
+        }
+      }, 1000);
+    }
+
+    function resendOTP() {
+      ['otp1','otp2','otp3','otp4','otp5','otp6'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = '';
+        el.classList.remove('filled');
+      });
+      document.getElementById('otp1').focus();
+      startTimer(30);
+      alert(`OTP resent to +91 ${phoneNumber}`);
+    }
+
+    function backToPhone() {
+      clearInterval(timerInterval);
+      document.getElementById('citizen-otp-step').classList.remove('active');
+      document.getElementById('citizen-phone-step').style.display = 'block';
+    }
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

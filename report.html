@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Report a Problem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502;
+    }
+    html { scroll-behavior: smooth; }
+    body { background:var(--navy); color:var(--white); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; }
+
+    /* NAV */
+    nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:rgba(7,17,31,0.95); border-bottom:1px solid var(--border); backdrop-filter:blur(18px); position:sticky; top:0; z-index:100; }
+    .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; letter-spacing:-.03em; color:var(--white); text-decoration:none; }
+    .logo span { color:var(--green); }
+    .nav-back { color:var(--muted); text-decoration:none; font-size:.85rem; transition:color .2s; }
+    .nav-back:hover { color:var(--white); }
+
+    /* LAYOUT */
+    .page { max-width:720px; margin:0 auto; padding:3rem 2rem 6rem; }
+
+    .page-header { margin-bottom:2.5rem; }
+    .page-tag { font-size:.75rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.7rem; }
+    .page-title { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; }
+    .page-sub { color:var(--muted); margin-top:.6rem; font-size:.95rem; line-height:1.6; }
+
+    /* PROGRESS */
+    .progress-bar { display:flex; align-items:center; gap:0; margin-bottom:3rem; }
+    .prog-step { display:flex; flex-direction:column; align-items:center; gap:.4rem; flex:1; }
+    .prog-dot { width:36px; height:36px; border-radius:50%; border:2px solid var(--border); background:var(--navy3); display:flex; align-items:center; justify-content:center; font-size:.85rem; transition:all .3s; }
+    .prog-dot.active { border-color:var(--green); background:var(--green); color:var(--navy); font-weight:700; }
+    .prog-dot.done { border-color:var(--green); background:rgba(0,232,122,.15); color:var(--green); }
+    .prog-label { font-size:.68rem; color:var(--muted); text-align:center; line-height:1.3; }
+    .prog-label.active { color:var(--green); }
+    .prog-line { flex:1; height:2px; background:var(--border); margin-bottom:1.4rem; transition:background .3s; }
+    .prog-line.done { background:var(--green); }
+
+    /* STEPS */
+    .step-section { display:none; animation:fadeUp .4s ease; }
+    .step-section.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+
+    /* UPLOAD ZONE */
+    .upload-zone {
+      border:2px dashed var(--border); border-radius:20px;
+      padding:3rem 2rem; text-align:center; cursor:pointer;
+      transition:all .3s; background:var(--card);
+      position:relative; overflow:hidden;
+    }
+    .upload-zone:hover { border-color:rgba(0,232,122,.4); background:rgba(0,232,122,.03); }
+    .upload-zone.drag { border-color:var(--green); background:rgba(0,232,122,.06); transform:scale(1.01); }
+    .upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .upload-icon { font-size:3rem; margin-bottom:1rem; }
+    .upload-title { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:600; margin-bottom:.4rem; }
+    .upload-sub { color:var(--muted); font-size:.85rem; }
+    .upload-sub span { color:var(--green); }
+
+    /* PREVIEW */
+    .preview-box { display:none; border-radius:20px; overflow:hidden; position:relative; background:var(--navy3); border:1px solid var(--border); }
+    .preview-box img { width:100%; max-height:320px; object-fit:cover; display:block; }
+    .preview-overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(7,17,31,.9) 0%, transparent 50%); }
+    .preview-change { position:absolute; top:1rem; right:1rem; background:rgba(7,17,31,.8); border:1px solid var(--border); color:var(--white); padding:.4rem .9rem; border-radius:100px; font-size:.75rem; cursor:pointer; backdrop-filter:blur(8px); transition:all .2s; }
+    .preview-change:hover { border-color:rgba(255,255,255,.3); }
+
+    /* AI ANALYSIS */
+    .ai-box { background:var(--navy3); border:1px solid var(--border); border-radius:20px; padding:1.8rem; margin-top:1.5rem; display:none; }
+    .ai-box.visible { display:block; animation:fadeUp .4s ease; }
+    .ai-header { display:flex; align-items:center; gap:.8rem; margin-bottom:1.3rem; }
+    .ai-icon { width:40px; height:40px; border-radius:12px; background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.2); display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+    .ai-title { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; }
+    .ai-sub { font-size:.78rem; color:var(--muted); }
+    .ai-scanning { display:flex; align-items:center; gap:.8rem; color:var(--muted); font-size:.88rem; }
+    .scan-bar { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+    .scan-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--green2)); border-radius:2px; animation:scan 1.5s ease forwards; }
+    @keyframes scan { from{width:0;}to{width:100%;} }
+
+    .ai-results { display:none; }
+    .ai-results.visible { display:block; animation:fadeUp .3s ease; }
+    .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin-bottom:1rem; }
+    .result-item { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.9rem; }
+    .result-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
+    .result-val { font-size:.95rem; font-weight:500; color:var(--white); }
+    .result-val.green { color:var(--green); }
+    .result-val.red { color:var(--red); }
+    .result-val.orange { color:var(--orange); }
+
+    .severity-bar { margin-top:.3rem; }
+    .sev-track { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:.4rem; }
+    .sev-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#FFD32A,#FF4757); }
+
+    .ai-confidence { display:flex; align-items:center; justify-content:space-between; background:rgba(0,232,122,.06); border:1px solid rgba(0,232,122,.12); border-radius:10px; padding:.7rem 1rem; margin-top:.8rem; }
+    .conf-label { font-size:.78rem; color:var(--muted); }
+    .conf-val { font-size:.9rem; font-weight:600; color:var(--green); font-family:'Syne',sans-serif; }
+
+    /* FORM FIELDS */
+    .field { margin-bottom:1.5rem; }
+    .field label { display:block; font-size:.82rem; color:var(--muted); margin-bottom:.5rem; font-weight:400; letter-spacing:.02em; }
+    .field label span { color:var(--green); }
+    .field input, .field textarea, .field select {
+      width:100%; background:var(--navy3); border:1px solid var(--border);
+      color:var(--white); font-family:'DM Sans',sans-serif; font-size:.9rem;
+      padding:.85rem 1rem; border-radius:12px; outline:none;
+      transition:border-color .2s; font-weight:300;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus { border-color:rgba(0,232,122,.4); }
+    .field input::placeholder, .field textarea::placeholder { color:var(--muted); }
+    .field textarea { resize:vertical; min-height:100px; }
+    .field select option { background:var(--navy2); }
+
+    .field-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+    /* GPS */
+    .gps-field { display:flex; gap:.8rem; align-items:flex-end; }
+    .gps-field input { flex:1; }
+    .gps-btn { background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.2); color:var(--green); padding:.85rem 1.2rem; border-radius:12px; cursor:pointer; font-size:.85rem; white-space:nowrap; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .gps-btn:hover { background:rgba(0,232,122,.2); }
+
+    /* AUTHORITY BOX */
+    .authority-box { background:var(--navy3); border:1px solid rgba(0,232,122,.15); border-radius:14px; padding:1.2rem 1.4rem; margin-top:-.5rem; margin-bottom:1.5rem; display:none; }
+    .authority-box.visible { display:block; animation:fadeUp .3s ease; }
+    .auth-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.8rem; }
+    .auth-icon { font-size:1.1rem; }
+    .auth-title { font-size:.82rem; font-weight:500; color:var(--green); }
+    .auth-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+    .auth-item { }
+    .auth-item-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.2rem; }
+    .auth-item-val { font-size:.82rem; color:var(--white); }
+
+    /* TAGS */
+    .tags-row { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .tag { padding:.35rem .9rem; border-radius:100px; font-size:.75rem; border:1px solid var(--border); background:var(--card); color:var(--muted); cursor:pointer; transition:all .2s; }
+    .tag:hover { border-color:rgba(0,232,122,.3); color:var(--white); }
+    .tag.selected { background:rgba(0,232,122,.1); border-color:rgba(0,232,122,.3); color:var(--green); }
+
+    /* SUBMIT */
+    .btn-primary { width:100%; background:var(--green); color:var(--navy); border:none; padding:1rem; border-radius:14px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all .25s; letter-spacing:-.01em; }
+    .btn-primary:hover { background:var(--green2); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,232,122,.25); }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+    .btn-secondary { width:100%; background:transparent; color:var(--white); border:1px solid var(--border); padding:.9rem; border-radius:14px; font-family:'DM Sans',sans-serif; font-size:.95rem; cursor:pointer; transition:all .25s; margin-top:.8rem; }
+    .btn-secondary:hover { border-color:rgba(255,255,255,.2); background:rgba(255,255,255,.04); }
+
+    /* SUCCESS */
+    .success-box { text-align:center; padding:3rem 1rem; display:none; animation:fadeUp .5s ease; }
+    .success-box.visible { display:block; }
+    .success-circle { width:90px; height:90px; border-radius:50%; background:rgba(0,232,122,.15); border:2px solid var(--green); display:flex; align-items:center; justify-content:center; font-size:2.5rem; margin:0 auto 1.5rem; animation:popIn .5s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes popIn { from{transform:scale(0);}to{transform:scale(1);} }
+    .success-title { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; letter-spacing:-.04em; margin-bottom:.6rem; }
+    .success-sub { color:var(--muted); font-size:.95rem; line-height:1.6; max-width:400px; margin:0 auto 2rem; }
+    .tracking-id { background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:1.2rem; margin-bottom:2rem; }
+    .tracking-id-label { font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
+    .tracking-id-val { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; color:var(--green); letter-spacing:.04em; }
+    .success-actions { display:flex; flex-direction:column; gap:.8rem; max-width:320px; margin:0 auto; }
+    .btn-success { padding:.9rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:.9rem; cursor:pointer; transition:all .2s; text-decoration:none; display:block; text-align:center; }
+    .btn-success.primary { background:var(--green); color:var(--navy); border:none; font-weight:500; }
+    .btn-success.secondary { background:transparent; color:var(--white); border:1px solid var(--border); }
+    .btn-success:hover { transform:translateY(-1px); }
+
+    /* CHATBOT */
+    .chatbot-btn { position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; border-radius:50%; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 8px 32px rgba(0,232,122,.35); z-index:9999; transition:all .3s; animation:float 3s ease-in-out infinite; }
+    .chatbot-btn:hover { transform:scale(1.1); }
+    @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);} }
+
+    @media(max-width:600px) {
+      .field-row { grid-template-columns:1fr; }
+      .result-grid { grid-template-columns:1fr; }
+      .auth-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+      <a href="home.html" class="nav-back">← Back to Map</a>
+      <a href="index.html" class="logo">Road<span>Watch</span></a>
+    </div>
+    <div style="font-size:.82rem;color:var(--muted);">Step <span id="stepNum">1</span> of 3</div>
+  </nav>
+
+  <div class="page">
+
+    <div class="page-header">
+      <div class="page-tag">Report a Problem</div>
+      <h1 class="page-title">What did you find<br/>on the road?</h1>
+      <p class="page-sub">Takes less than 60 seconds. Our AI does the heavy lifting.</p>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar">
+      <div class="prog-step">
+        <div class="prog-dot active" id="dot1">📸</div>
+        <div class="prog-label active" id="lbl1">Photo</div>
+      </div>
+      <div class="prog-line" id="line1"></div>
+      <div class="prog-step">
+        <div class="prog-dot" id="dot2">📍</div>
+        <div class="prog-label" id="lbl2">Details</div>
+      </div>
+      <div class="prog-line" id="line2"></div>
+      <div class="prog-step">
+        <div class="prog-dot" id="dot3">✅</div>
+        <div class="prog-label" id="lbl3">Submit</div>
+      </div>
+    </div>
+
+    <!-- STEP 1 — PHOTO -->
+    <div class="step-section active" id="step1">
+
+      <!-- Upload Zone -->
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" accept="image/*" capture="environment" id="photoInput" onchange="handlePhoto(this)"/>
+        <div class="upload-icon">📸</div>
+        <div class="upload-title">Take or upload a photo</div>
+        <div class="upload-sub">Tap to open camera or choose from gallery<br/><span>AI will auto-detect damage type and severity</span></div>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-box" id="previewBox">
+        <img id="previewImg" src="" alt="Road damage"/>
+        <div class="preview-overlay"></div>
+        <button class="preview-change" onclick="changePhoto()">Change Photo</button>
+      </div>
+
+      <!-- AI Analysis -->
+      <div class="ai-box" id="aiBox">
+        <div class="ai-header">
+          <div class="ai-icon">🤖</div>
+          <div>
+            <div class="ai-title">AI Damage Analysis</div>
+            <div class="ai-sub">YOLOv8 Computer Vision</div>
+          </div>
+        </div>
+
+        <!-- Scanning state -->
+        <div id="scanState">
+          <div class="ai-scanning">
+            <span>Analysing image...</span>
+            <div class="scan-bar"><div class="scan-fill"></div></div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="ai-results" id="aiResults">
+          <div class="result-grid">
+            <div class="result-item">
+              <div class="result-label">Damage Type</div>
+              <div class="result-val green" id="aiType">Pothole</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Severity</div>
+              <div class="result-val red" id="aiSev">4 / 5 — High</div>
+              <div class="severity-bar">
+                <div class="sev-track"><div class="sev-fill" id="aiSevBar" style="width:80%"></div></div>
+              </div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Road Surface</div>
+              <div class="result-val" id="aiSurface">Asphalt</div>
+            </div>
+            <div class="result-item">
+              <div class="result-label">Estimated Size</div>
+              <div class="result-val" id="aiSize">~60 cm wide</div>
+            </div>
+          </div>
+          <div class="ai-confidence">
+            <span class="conf-label">AI Confidence Score</span>
+            <span class="conf-val" id="aiConf">94.2%</span>
+          </div>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.8rem;">✏️ You can correct these below if needed.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <button class="btn-primary" id="btnStep1" onclick="goStep(2)" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 — DETAILS -->
+    <div class="step-section" id="step2">
+
+      <div class="field">
+        <label>Damage Type <span>*</span></label>
+        <select id="damageType">
+          <option value="Pothole">🕳️ Pothole</option>
+          <option value="Crack">🪨 Road Crack</option>
+          <option value="Broken Divider">🚧 Broken Divider</option>
+          <option value="Faded Markings">🎨 Faded Lane Markings</option>
+          <option value="Missing Signboard">🪧 Missing Signboard</option>
+          <option value="Waterlogging">💧 Waterlogging</option>
+          <option value="Broken Light">💡 Broken Street Light</option>
+          <option value="Other">📋 Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Severity <span>*</span></label>
+        <select id="severitySelect">
+          <option value="5">5 — Critical (Immediate danger)</option>
+          <option value="4" selected>4 — High (Major disruption)</option>
+          <option value="3">3 — Moderate (Manageable but serious)</option>
+          <option value="2">2 — Low (Minor inconvenience)</option>
+          <option value="1">1 — Minimal (Cosmetic only)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Location / Road Name <span>*</span></label>
+        <input type="text" id="roadName" placeholder="e.g. Avinashi Road near Brookefields Mall"/>
+      </div>
+
+      <div class="field">
+        <label>GPS Coordinates <span>*</span></label>
+        <div class="gps-field">
+          <input type="text" id="gpsCoords" placeholder="Tap to get your location" readonly/>
+          <button class="gps-btn" onclick="getGPS()">📍 Get Location</button>
+        </div>
+      </div>
+
+      <!-- Authority Auto-Detected -->
+      <div class="authority-box" id="authorityBox">
+        <div class="auth-header">
+          <span class="auth-icon">🏛️</span>
+          <span class="auth-title">Authority Auto-Identified</span>
+        </div>
+        <div class="auth-grid">
+          <div class="auth-item">
+            <div class="auth-item-label">Road Type</div>
+            <div class="auth-item-val" id="authRoadType">Municipal Road</div>
+          </div>
+          <div class="auth-item">
+            <div class="auth-item-label">Executive Engineer</div>
+            <div class="auth-item-val" id="authEE">EE — CCMC Zone 3</div>
+          </div>
+          <div class="auth-item">
+            <div class="auth-item-label">Department</div>
+            <div class="auth-item-val" id="authDept">Coimbatore City Municipal Corp.</div>
+          </div>
+          <div class="auth-item">
+            <div class="auth-item-label">Last Relaying Date</div>
+            <div class="auth-item-val" id="authRelaying">March 2023</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Road Type</label>
+        <select id="roadType" onchange="updateAuthority()">
+          <option value="municipal">Municipal Road (City Corporation)</option>
+          <option value="nh">National Highway (NHAI)</option>
+          <option value="sh">State Highway (PWD Tamil Nadu)</option>
+          <option value="mdr">Major District Road (Highways Dept.)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Additional Tags</label>
+        <div class="tags-row">
+          <div class="tag" onclick="toggleTag(this)">Near school</div>
+          <div class="tag" onclick="toggleTag(this)">Near hospital</div>
+          <div class="tag" onclick="toggleTag(this)">Night visibility issue</div>
+          <div class="tag" onclick="toggleTag(this)">Recurring problem</div>
+          <div class="tag" onclick="toggleTag(this)">Accident-prone spot</div>
+          <div class="tag" onclick="toggleTag(this)">Heavy vehicle route</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Additional Notes <span style="color:var(--muted);font-weight:300;">(optional)</span></label>
+        <textarea id="notes" placeholder="Any extra details that might help authorities... e.g. 'gets worse after rain', 'no warning signs nearby'"></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field" style="margin-bottom:0;">
+          <label>Your Name <span style="color:var(--muted);font-weight:300;">(optional)</span></label>
+          <input type="text" id="userName" placeholder="Anonymous"/>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Phone <span style="color:var(--muted);font-weight:300;">(optional)</span></label>
+          <input type="tel" id="userPhone" placeholder="+91 XXXXX XXXXX"/>
+        </div>
+      </div>
+
+      <div style="margin-top:2rem;">
+        <button class="btn-primary" onclick="goStep(3)">Review &amp; Submit →</button>
+        <button class="btn-secondary" onclick="goStep(1)">← Back</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 — REVIEW & SUBMIT -->
+    <div class="step-section" id="step3">
+      <div style="background:var(--navy3);border:1px solid var(--border);border-radius:20px;padding:1.8rem;margin-bottom:1.5rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:1.2rem;letter-spacing:-.02em;">Review Your Report</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem;">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Damage Type</div>
+            <div style="font-size:.9rem;font-weight:500;" id="rev-type">Pothole</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem;">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Severity</div>
+            <div style="font-size:.9rem;font-weight:500;color:var(--red);" id="rev-sev">4 / 5</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem;grid-column:span 2;">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Location</div>
+            <div style="font-size:.9rem;font-weight:500;" id="rev-loc">—</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem;grid-column:span 2;">
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;">Will be sent to</div>
+            <div style="font-size:.9rem;font-weight:500;color:var(--green);" id="rev-auth">Coimbatore City Municipal Corp.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(0,232,122,.05);border:1px solid rgba(0,232,122,.15);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:.82rem;color:var(--muted);line-height:1.6;">
+        🔔 <strong style="color:var(--white);">Community Verification:</strong> Once the authority marks this fixed, nearby users within 2km will be notified to verify. You'll also be notified if you're in the area.
+      </div>
+
+      <button class="btn-primary" id="submitBtn" onclick="submitReport()">🚨 Submit Report Now</button>
+      <button class="btn-secondary" onclick="goStep(2)">← Edit Details</button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success-box" id="successBox">
+      <div class="success-circle">✅</div>
+      <div class="success-title">Report Submitted!</div>
+      <p class="success-sub">Your complaint has been filed and routed to the responsible authority. You can track its status in real time.</p>
+
+      <div class="tracking-id">
+        <div class="tracking-id-label">Your Tracking ID</div>
+        <div class="tracking-id-val" id="trackingId">RW-CBE-2026-0847</div>
+      </div>
+
+      <div style="background:var(--navy3);border:1px solid var(--border);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:.82rem;color:var(--muted);text-align:left;line-height:1.6;">
+        📬 <strong style="color:var(--white);">Sent to:</strong> <span id="successAuth">Coimbatore City Municipal Corp.</span><br/>
+        ⏱️ Expected response within <strong style="color:var(--white);">7 working days</strong><br/>
+        👥 <strong style="color:var(--white);">Community Verification:</strong> Nearby users notified to verify once fixed
+      </div>
+
+      <div class="success-actions">
+        <a href="home.html" class="btn-success primary">🗺️ Track on Live Map</a>
+        <a href="report.html" class="btn-success secondary">📸 Report Another Problem</a>
+        <a href="index.html" class="btn-success secondary">🏠 Back to Home</a>
+      </div>
+
+      <div style="margin-top:1.5rem;font-size:.78rem;color:var(--muted);">
+        🏆 You earned <strong style="color:var(--green);">+25 Road Guardian Points</strong>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="chatbot-btn" onclick="alert('RoadBot: Need help reporting? Just tell me what you see! 🤖')">🤖</button>
+
+  <script>
+    let currentStep = 1;
+    let photoUploaded = false;
+
+    // AI damage types for simulation
+    const damageTypes = ['Pothole','Crack','Broken Divider','Faded Markings','Waterlogging','Missing Signboard'];
+    const severities = [3,4,4,5,3,4,5];
+    const sizes = ['~45 cm wide','~60 cm wide','~30 cm long','~80 cm wide','~1.2 m area','~25 cm deep'];
+    const confidences = ['91.3','94.2','87.8','96.1','89.4','92.7'];
+
+    // Authority mapping
+    const authorityMap = {
+      municipal: { roadType:'Municipal Road', ee:'EE — CCMC Zone 3', dept:'Coimbatore City Municipal Corp.', relaying:'March 2023' },
+      nh: { roadType:'National Highway', ee:'Project Director — NHAI Coimbatore', dept:'National Highways Authority of India', relaying:'January 2022' },
+      sh: { roadType:'State Highway', ee:'EE — PWD Coimbatore Division', dept:'Public Works Dept. Tamil Nadu', relaying:'August 2021' },
+      mdr: { roadType:'Major District Road', ee:'EE — Highways Dept. Coimbatore', dept:'Tamil Nadu Highways Dept.', relaying:'November 2020' }
+    };
+
+    function handlePhoto(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('uploadZone').style.display = 'none';
+        document.getElementById('previewBox').style.display = 'block';
+        runAI();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function runAI() {
+      const aiBox = document.getElementById('aiBox');
+      aiBox.classList.add('visible');
+      document.getElementById('scanState').style.display = 'flex';
+      document.getElementById('aiResults').classList.remove('visible');
+
+      // Simulate AI analysis
+      setTimeout(() => {
+        const idx = Math.floor(Math.random() * damageTypes.length);
+        const sev = severities[idx];
+        const sevPct = (sev / 5 * 100) + '%';
+        const sevLabel = sev >= 5 ? 'Critical' : sev >= 4 ? 'High' : sev >= 3 ? 'Moderate' : 'Low';
+        const sevColor = sev >= 4 ? 'red' : sev >= 3 ? 'orange' : 'green';
+
+        document.getElementById('aiType').textContent = damageTypes[idx];
+        document.getElementById('aiSev').textContent = sev + ' / 5 — ' + sevLabel;
+        document.getElementById('aiSev').className = 'result-val ' + sevColor;
+        document.getElementById('aiSevBar').style.width = sevPct;
+        document.getElementById('aiSurface').textContent = 'Asphalt';
+        document.getElementById('aiSize').textContent = sizes[idx];
+        document.getElementById('aiConf').textContent = confidences[idx] + '%';
+
+        // Pre-fill form
+        document.getElementById('damageType').value = damageTypes[idx];
+        document.getElementById('severitySelect').value = sev;
+
+        document.getElementById('scanState').style.display = 'none';
+        document.getElementById('aiResults').classList.add('visible');
+
+        photoUploaded = true;
+        document.getElementById('btnStep1').disabled = false;
+      }, 2000);
+    }
+
+    function changePhoto() {
+      document.getElementById('uploadZone').style.display = 'block';
+      document.getElementById('previewBox').style.display = 'none';
+      document.getElementById('aiBox').classList.remove('visible');
+      document.getElementById('btnStep1').disabled = true;
+      photoUploaded = false;
+      document.getElementById('photoInput').value = '';
+    }
+
+    function getGPS() {
+      const btn = document.querySelector('.gps-btn');
+      btn.textContent = '📡 Getting...';
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lng = pos.coords.longitude.toFixed(6);
+          document.getElementById('gpsCoords').value = lat + ', ' + lng;
+          btn.textContent = '✅ Got it!';
+          showAuthority();
+        }, () => {
+          // Fallback to Coimbatore center
+          document.getElementById('gpsCoords').value = '11.016844, 76.955832';
+          btn.textContent = '✅ Got it!';
+          showAuthority();
+        });
+      } else {
+        document.getElementById('gpsCoords').value = '11.016844, 76.955832';
+        btn.textContent = '✅ Got it!';
+        showAuthority();
+      }
+    }
+
+    function showAuthority() {
+      updateAuthority();
+      document.getElementById('authorityBox').classList.add('visible');
+    }
+
+    function updateAuthority() {
+      const type = document.getElementById('roadType').value;
+      const auth = authorityMap[type];
+      document.getElementById('authRoadType').textContent = auth.roadType;
+      document.getElementById('authEE').textContent = auth.ee;
+      document.getElementById('authDept').textContent = auth.dept;
+      document.getElementById('authRelaying').textContent = auth.relaying;
+    }
+
+    function toggleTag(el) { el.classList.toggle('selected'); }
+
+    function goStep(n) {
+      document.getElementById('step' + currentStep).classList.remove('active');
+      document.getElementById('dot' + currentStep).classList.remove('active');
+      document.getElementById('dot' + currentStep).classList.add('done');
+      document.getElementById('lbl' + currentStep).classList.remove('active');
+      if (currentStep < n && currentStep < 3) {
+        document.getElementById('line' + currentStep).classList.add('done');
+      }
+      currentStep = n;
+      document.getElementById('step' + currentStep).classList.add('active');
+      document.getElementById('dot' + currentStep).classList.remove('done');
+      document.getElementById('dot' + currentStep).classList.add('active');
+      document.getElementById('lbl' + currentStep).classList.add('active');
+      document.getElementById('stepNum').textContent = currentStep;
+
+      if (n === 3) populateReview();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function populateReview() {
+      const type = document.getElementById('damageType').value;
+      const sev = document.getElementById('severitySelect').value;
+      const loc = document.getElementById('roadName').value || 'Location not specified';
+      const roadType = document.getElementById('roadType').value;
+      const auth = authorityMap[roadType];
+
+      document.getElementById('rev-type').textContent = type;
+      document.getElementById('rev-sev').textContent = sev + ' / 5';
+      document.getElementById('rev-loc').textContent = loc;
+      document.getElementById('rev-auth').textContent = auth.dept;
+    }
+
+    function submitReport() {
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = '⏳ Submitting...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const roadType = document.getElementById('roadType').value;
+        const auth = authorityMap[roadType];
+        const id = 'RW-CBE-2026-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+        document.getElementById('trackingId').textContent = id;
+        document.getElementById('successAuth').textContent = auth.dept;
+
+        // Hide all steps
+        document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('successBox').classList.add('visible');
+        document.querySelector('.progress-bar').style.display = 'none';
+        document.querySelector('.page-header').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 2000);
+    }
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — My Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502; --yellow:#FFD32A;
+    }
+    html { scroll-behavior: smooth; }
+    body { background:var(--navy); color:var(--white); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; }
+
+    /* NAV */
+    nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; background:rgba(7,17,31,0.95); border-bottom:1px solid var(--border); backdrop-filter:blur(18px); position:sticky; top:0; z-index:100; }
+    .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; letter-spacing:-.03em; color:var(--white); text-decoration:none; }
+    .logo span { color:var(--green); }
+    .nav-back { color:var(--muted); text-decoration:none; font-size:.85rem; transition:color .2s; }
+    .nav-back:hover { color:var(--white); }
+    .btn-report { background:var(--green); color:var(--navy); border:none; padding:.5rem 1.2rem; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:500; cursor:pointer; text-decoration:none; transition:all .2s; }
+    .btn-report:hover { background:var(--green2); transform:translateY(-1px); }
+
+    /* PAGE */
+    .page { max-width:800px; margin:0 auto; padding:3rem 2rem 6rem; }
+
+    .page-header { margin-bottom:2.5rem; }
+    .page-tag { font-size:.75rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.7rem; }
+    .page-title { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; }
+    .page-sub { color:var(--muted); margin-top:.6rem; font-size:.95rem; line-height:1.6; }
+
+    /* USER CARD */
+    .user-card { background:var(--navy3); border:1px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:2rem; display:flex; align-items:center; gap:1.5rem; }
+    .user-avatar { width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg,var(--green),#0055FF); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0; }
+    .user-name { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:-.02em; margin-bottom:.2rem; }
+    .user-rank { font-size:.78rem; color:var(--green); font-weight:500; }
+    .user-stats { display:flex; gap:2rem; margin-left:auto; }
+    .user-stat { text-align:center; }
+    .user-stat-num { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; color:var(--white); line-height:1; }
+    .user-stat-num span { color:var(--green); font-size:1rem; }
+    .user-stat-label { font-size:.68rem; color:var(--muted); margin-top:.2rem; text-transform:uppercase; letter-spacing:.04em; }
+
+    /* POINTS BAR */
+    .points-bar { background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:1rem 1.5rem; margin-bottom:2rem; display:flex; align-items:center; gap:1.5rem; }
+    .points-info { flex:1; }
+    .points-label { font-size:.75rem; color:var(--muted); margin-bottom:.4rem; }
+    .points-track { height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .points-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--green),#0055FF); width:68%; transition:width 1s ease; }
+    .points-val { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; color:var(--green); white-space:nowrap; }
+    .next-badge { font-size:.72rem; color:var(--muted); text-align:right; margin-top:.3rem; }
+
+    /* FILTERS */
+    .filters-row { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .filter-btn { padding:.35rem .9rem; border-radius:100px; font-size:.78rem; font-weight:400; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .filter-btn:hover { border-color:rgba(255,255,255,.2); color:var(--white); }
+    .filter-btn.active { background:var(--green); border-color:var(--green); color:var(--navy); font-weight:500; }
+
+    /* REPORT CARDS */
+    .report-card { background:var(--navy2); border:1px solid var(--border); border-radius:20px; margin-bottom:1rem; overflow:hidden; transition:all .3s; cursor:pointer; }
+    .report-card:hover { border-color:rgba(0,232,122,.2); transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,0,0,.3); }
+    .report-card.expanded { border-color:rgba(0,232,122,.25); }
+
+    .card-top { display:flex; align-items:center; gap:1rem; padding:1.2rem 1.5rem; }
+    .card-thumb { width:56px; height:56px; border-radius:12px; background:var(--navy3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0; }
+    .card-info { flex:1; }
+    .card-type { font-family:'Syne',sans-serif; font-size:.95rem; font-weight:600; letter-spacing:-.02em; margin-bottom:.2rem; }
+    .card-loc { font-size:.78rem; color:var(--muted); margin-bottom:.3rem; }
+    .card-meta { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .card-right { text-align:right; flex-shrink:0; }
+    .card-id { font-size:.68rem; color:var(--muted); margin-bottom:.3rem; font-family:'Syne',sans-serif; letter-spacing:.04em; }
+    .card-date { font-size:.72rem; color:var(--muted); }
+
+    /* STATUS BADGES */
+    .status-badge { padding:.2rem .7rem; border-radius:100px; font-size:.7rem; font-weight:500; }
+    .s-filed { background:rgba(136,153,187,.1); color:var(--muted); border:1px solid rgba(136,153,187,.15); }
+    .s-sent { background:rgba(0,85,255,.1); color:#6699FF; border:1px solid rgba(0,85,255,.15); }
+    .s-acknowledged { background:rgba(255,165,2,.1); color:var(--orange); border:1px solid rgba(255,165,2,.15); }
+    .s-progress { background:rgba(255,165,2,.15); color:var(--orange); border:1px solid rgba(255,165,2,.2); }
+    .s-fixed { background:rgba(0,232,122,.1); color:var(--green); border:1px solid rgba(0,232,122,.15); }
+    .s-verified { background:rgba(0,232,122,.2); color:var(--green); border:1px solid rgba(0,232,122,.3); }
+
+    .sev-badge { padding:.2rem .6rem; border-radius:100px; font-size:.68rem; font-weight:500; }
+    .sev-high { background:rgba(255,71,87,.12); color:var(--red); border:1px solid rgba(255,71,87,.2); }
+    .sev-med { background:rgba(255,165,2,.12); color:var(--orange); border:1px solid rgba(255,165,2,.2); }
+    .sev-low { background:rgba(255,211,42,.12); color:var(--yellow); border:1px solid rgba(255,211,42,.2); }
+
+    /* EXPANDED DETAIL */
+    .card-detail { display:none; padding:0 1.5rem 1.5rem; border-top:1px solid var(--border); }
+    .card-detail.visible { display:block; animation:fadeDown .3s ease; }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
+
+    /* PIPELINE */
+    .pipeline { display:flex; align-items:center; margin:1.2rem 0; overflow-x:auto; padding-bottom:.3rem; }
+    .pipe-step { display:flex; flex-direction:column; align-items:center; min-width:80px; }
+    .pipe-dot { width:36px; height:36px; border-radius:50%; border:2px solid var(--border); background:var(--navy3); display:flex; align-items:center; justify-content:center; font-size:.85rem; transition:all .3s; }
+    .pipe-dot.done { border-color:var(--green); background:rgba(0,232,122,.15); }
+    .pipe-dot.current { border-color:var(--green); background:var(--green); color:var(--navy); animation:glow 2s ease infinite; }
+    @keyframes glow { 0%,100%{box-shadow:0 0 0 0 rgba(0,232,122,.4);}50%{box-shadow:0 0 0 8px rgba(0,232,122,0);} }
+    .pipe-label { font-size:.6rem; color:var(--muted); margin-top:.4rem; text-align:center; line-height:1.2; }
+    .pipe-label.done { color:var(--green); }
+    .pipe-label.current { color:var(--green); font-weight:500; }
+    .pipe-line { flex:1; height:2px; background:var(--border); min-width:20px; margin-bottom:1.3rem; }
+    .pipe-line.done { background:var(--green); }
+
+    /* TIMELINE */
+    .timeline { margin-top:1rem; }
+    .timeline-title { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.8rem; }
+    .timeline-item { display:flex; gap:.8rem; margin-bottom:.7rem; align-items:flex-start; }
+    .timeline-dot { width:8px; height:8px; border-radius:50%; background:var(--green); margin-top:.3rem; flex-shrink:0; }
+    .timeline-dot.pending { background:var(--border); }
+    .timeline-text { font-size:.8rem; color:var(--white); line-height:1.4; }
+    .timeline-time { font-size:.7rem; color:var(--muted); margin-top:.1rem; }
+
+    /* ACTIONS */
+    .card-actions { display:flex; gap:.6rem; margin-top:1.2rem; flex-wrap:wrap; }
+    .action-btn { padding:.5rem 1rem; border-radius:10px; font-size:.78rem; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--card); color:var(--white); font-family:'DM Sans',sans-serif; }
+    .action-btn:hover { border-color:rgba(0,232,122,.3); color:var(--green); }
+    .action-btn.verify { background:var(--green); border-color:var(--green); color:var(--navy); }
+    .action-btn.verify:hover { background:var(--green2); }
+    .action-btn.community { background:rgba(0,85,255,.1); border-color:rgba(0,85,255,.3); color:#6699FF; }
+
+    /* COMMUNITY VERIFY ALERT */
+    .verify-alert { background:rgba(0,232,122,.06); border:1px solid rgba(0,232,122,.2); border-radius:12px; padding:.9rem 1.1rem; margin-top:1rem; display:flex; align-items:center; gap:.8rem; }
+    .verify-alert-icon { font-size:1.2rem; }
+    .verify-alert-text { font-size:.78rem; color:var(--muted); line-height:1.5; }
+    .verify-alert-text strong { color:var(--white); }
+
+    /* COMMUNITY NEARBY */
+    .nearby-verifiers { margin-top:1rem; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.9rem 1.1rem; }
+    .nearby-title { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.6rem; }
+    .verifier-row { display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; }
+    .verifier-avatar { width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,var(--green),#0055FF); display:flex; align-items:center; justify-content:center; font-size:.6rem; flex-shrink:0; }
+    .verifier-name { font-size:.78rem; color:var(--white); flex:1; }
+    .verifier-dist { font-size:.7rem; color:var(--muted); }
+    .verifier-status { font-size:.68rem; color:var(--green); }
+
+    /* EMPTY STATE */
+    .empty-state { text-align:center; padding:4rem 2rem; }
+    .empty-icon { font-size:3.5rem; margin-bottom:1rem; }
+    .empty-title { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:700; margin-bottom:.5rem; }
+    .empty-sub { color:var(--muted); font-size:.9rem; margin-bottom:2rem; }
+    .btn-primary { background:var(--green); color:var(--navy); border:none; padding:.9rem 2rem; border-radius:100px; font-family:'Syne',sans-serif; font-size:.95rem; font-weight:700; cursor:pointer; text-decoration:none; transition:all .25s; display:inline-block; }
+    .btn-primary:hover { background:var(--green2); transform:translateY(-2px); }
+
+    /* CHATBOT */
+    .chatbot-btn { position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; border-radius:50%; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 8px 32px rgba(0,232,122,.35); z-index:9999; transition:all .3s; animation:float 3s ease-in-out infinite; }
+    .chatbot-btn:hover { transform:scale(1.1); }
+    @keyframes float { 0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);} }
+    .reveal { opacity:0; transform:translateY(20px); transition:opacity .5s ease,transform .5s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+
+    @media(max-width:600px) {
+      .user-stats { display:none; }
+      .card-top { flex-wrap:wrap; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+      <a href="home.html" class="nav-back">← Map</a>
+      <a href="index.html" class="logo">Road<span>Watch</span></a>
+    </div>
+    <a href="report.html" class="btn-report">📸 New Report</a>
+  </nav>
+
+  <div class="page">
+
+    <div class="page-header reveal">
+      <div class="page-tag">My Dashboard</div>
+      <h1 class="page-title">Your Reports</h1>
+      <p class="page-sub">Track every complaint you filed — in real time.</p>
+    </div>
+
+    <!-- USER CARD -->
+    <div class="user-card reveal">
+      <div class="user-avatar">🧑</div>
+      <div>
+        <div class="user-name">Pepo — Road Guardian</div>
+        <div class="user-rank">🏆 Rank #12 in Coimbatore</div>
+      </div>
+      <div class="user-stats">
+        <div class="user-stat">
+          <div class="user-stat-num">7<span></span></div>
+          <div class="user-stat-label">Filed</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-num">3<span></span></div>
+          <div class="user-stat-label">Resolved</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-num">175<span>pts</span></div>
+          <div class="user-stat-label">Points</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POINTS BAR -->
+    <div class="points-bar reveal">
+      <div class="points-info">
+        <div class="points-label">Road Guardian Progress</div>
+        <div class="points-track"><div class="points-fill"></div></div>
+        <div class="next-badge">25 pts to next badge: ⭐ Senior Guardian</div>
+      </div>
+      <div class="points-val">175 pts</div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters-row reveal">
+      <button class="filter-btn active" onclick="filterCards('all',this)">All (7)</button>
+      <button class="filter-btn" onclick="filterCards('active',this)">🔴 Active</button>
+      <button class="filter-btn" onclick="filterCards('progress',this)">🟠 In Progress</button>
+      <button class="filter-btn" onclick="filterCards('resolved',this)">✅ Resolved</button>
+      <button class="filter-btn" onclick="filterCards('verify',this)">👥 Needs Verify</button>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="cardsList"></div>
+
+  </div>
+
+  <button class="chatbot-btn" onclick="alert('RoadBot: Ask me about any of your reports! 🤖')">🤖</button>
+
+  <script>
+    const reports = [
+      {
+        id:'RW-CBE-2026-0847', type:'Pothole', icon:'🕳️',
+        location:'Avinashi Road near Brookefields Mall', area:'Peelamedu',
+        severity:4, sevLabel:'High', sevClass:'sev-high',
+        status:'In Progress', statusCode:4, statusClass:'s-progress',
+        date:'2 days ago', points:25, upvotes:18,
+        authority:'NHAI — Coimbatore Division',
+        roadType:'NH-544',
+        needsVerify: false,
+        timeline:[
+          { text:'Report filed and AI analysis complete', time:'2 days ago', done:true },
+          { text:'Authority identified: NHAI Coimbatore Division', time:'2 days ago', done:true },
+          { text:'Formal complaint sent to Executive Engineer', time:'1 day ago', done:true },
+          { text:'Complaint acknowledged by NHAI office', time:'18 hours ago', done:true },
+          { text:'Field team assigned — work scheduled', time:'Pending', done:false },
+          { text:'Repair completed', time:'Pending', done:false },
+          { text:'Community verification', time:'Pending', done:false },
+        ],
+        nearbyVerifiers:[
+          { name:'Arun K.', dist:'0.4 km away', status:'Notified' },
+          { name:'Priya M.', dist:'0.8 km away', status:'Notified' },
+          { name:'Karthik R.', dist:'1.2 km away', status:'Notified' },
+        ]
+      },
+      {
+        id:'RW-CBE-2026-0831', type:'Waterlogging', icon:'💧',
+        location:'DB Road, near Vivekananda Hall', area:'RS Puram',
+        severity:3, sevLabel:'Moderate', sevClass:'sev-med',
+        status:'Fixed — Awaiting Verification', statusCode:6, statusClass:'s-fixed',
+        date:'1 week ago', points:25, upvotes:31,
+        authority:'Coimbatore City Municipal Corp.',
+        roadType:'Municipal',
+        needsVerify: true,
+        timeline:[
+          { text:'Report filed', time:'1 week ago', done:true },
+          { text:'Routed to CCMC Zone 3', time:'1 week ago', done:true },
+          { text:'Acknowledged by Municipal Engineer', time:'6 days ago', done:true },
+          { text:'Drainage team deployed', time:'4 days ago', done:true },
+          { text:'Work completed — marked fixed by authority', time:'2 days ago', done:true },
+          { text:'Community verification pending', time:'Awaiting', done:false },
+        ],
+        nearbyVerifiers:[
+          { name:'Divya S.', dist:'0.3 km away', status:'✅ Verified' },
+          { name:'Mohammed A.', dist:'0.6 km away', status:'✅ Verified' },
+          { name:'Lakshmi P.', dist:'1.5 km away', status:'Notified' },
+        ]
+      },
+      {
+        id:'RW-CBE-2026-0819', type:'Broken Divider', icon:'🚧',
+        location:'Trichy Road, opp. Tidel Park', area:'Singanallur',
+        severity:5, sevLabel:'Critical', sevClass:'sev-high',
+        status:'Filed', statusCode:1, statusClass:'s-filed',
+        date:'5 hours ago', points:25, upvotes:7,
+        authority:'NHAI — Coimbatore Division',
+        roadType:'NH-83',
+        needsVerify: false,
+        timeline:[
+          { text:'Report filed and AI analysis complete', time:'5 hours ago', done:true },
+          { text:'Authority identification in progress', time:'In progress', done:false },
+          { text:'Complaint to be sent to Executive Engineer', time:'Pending', done:false },
+          { text:'Acknowledgement awaited', time:'Pending', done:false },
+          { text:'Repair scheduled', time:'Pending', done:false },
+          { text:'Repair completed', time:'Pending', done:false },
+          { text:'Community verification', time:'Pending', done:false },
+        ],
+        nearbyVerifiers:[]
+      },
+      {
+        id:'RW-CBE-2026-0803', type:'Faded Markings', icon:'🎨',
+        location:'Race Course Road, near Collector Office', area:'Race Course',
+        severity:2, sevLabel:'Low', sevClass:'sev-low',
+        status:'Community Verified ✅', statusCode:7, statusClass:'s-verified',
+        date:'3 weeks ago', points:25, upvotes:12,
+        authority:'Coimbatore City Municipal Corp.',
+        roadType:'Municipal',
+        needsVerify: false,
+        timeline:[
+          { text:'Report filed', time:'3 weeks ago', done:true },
+          { text:'Routed to CCMC', time:'3 weeks ago', done:true },
+          { text:'Acknowledged', time:'3 weeks ago', done:true },
+          { text:'Road marking team deployed', time:'2 weeks ago', done:true },
+          { text:'Lane markings repainted', time:'10 days ago', done:true },
+          { text:'3 community members verified fix', time:'8 days ago', done:true },
+        ],
+        nearbyVerifiers:[
+          { name:'Suresh V.', dist:'0.2 km', status:'✅ Verified' },
+          { name:'Anitha R.', dist:'0.5 km', status:'✅ Verified' },
+          { name:'Bala K.', dist:'0.9 km', status:'✅ Verified' },
+        ]
+      },
+    ];
+
+    const pipelineSteps = [
+      { icon:'📝', label:'Filed' },
+      { icon:'🔍', label:'Identified' },
+      { icon:'📬', label:'Sent' },
+      { icon:'👁️', label:'Ack\'d' },
+      { icon:'🔧', label:'Working' },
+      { icon:'🛠️', label:'Fixed' },
+      { icon:'✅', label:'Verified' },
+    ];
+
+    let expandedId = null;
+
+    function renderCards(filter) {
+      let filtered = reports;
+      if (filter === 'active') filtered = reports.filter(r => r.statusCode <= 2);
+      if (filter === 'progress') filtered = reports.filter(r => r.statusCode >= 3 && r.statusCode <= 5);
+      if (filter === 'resolved') filtered = reports.filter(r => r.statusCode >= 6);
+      if (filter === 'verify') filtered = reports.filter(r => r.needsVerify);
+
+      const container = document.getElementById('cardsList');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div class="empty-title">No reports here</div>
+            <p class="empty-sub">No reports match this filter.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => `
+        <div class="report-card reveal" id="card-${r.id}" onclick="toggleCard('${r.id}')">
+          <div class="card-top">
+            <div class="card-thumb">${r.icon}</div>
+            <div class="card-info">
+              <div class="card-type">${r.type}</div>
+              <div class="card-loc">📍 ${r.location}, ${r.area}</div>
+              <div class="card-meta">
+                <span class="status-badge ${r.statusClass}">${r.status}</span>
+                <span class="sev-badge ${r.sevClass}">Sev ${r.severity}/5</span>
+                <span style="font-size:.7rem;color:var(--muted);">👍 ${r.upvotes}</span>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="card-id">${r.id}</div>
+              <div class="card-date">${r.date}</div>
+              <div style="font-size:.7rem;color:var(--green);margin-top:.3rem;">+${r.points} pts</div>
+            </div>
+          </div>
+
+          <div class="card-detail ${expandedId === r.id ? 'visible' : ''}" id="detail-${r.id}">
+
+            <!-- Pipeline -->
+            <div style="margin-bottom:.5rem;">
+              <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;margin-top:.8rem;">Status Pipeline</div>
+              <div class="pipeline">
+                ${pipelineSteps.map((s, i) => {
+                  const isDone = i < r.statusCode - 1;
+                  const isCurrent = i === r.statusCode - 1;
+                  return `
+                    <div class="pipe-step">
+                      <div class="pipe-dot ${isDone?'done':''} ${isCurrent?'current':''}">${s.icon}</div>
+                      <div class="pipe-label ${isDone?'done':''} ${isCurrent?'current':''}">${s.label}</div>
+                    </div>
+                    ${i < pipelineSteps.length-1 ? `<div class="pipe-line ${isDone?'done':''}"></div>` : ''}
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Authority Info -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem;">
+              <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.7rem;">
+                <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;">Authority</div>
+                <div style="font-size:.8rem;color:var(--white);">${r.authority}</div>
+              </div>
+              <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.7rem;">
+                <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem;">Road Type</div>
+                <div style="font-size:.8rem;color:var(--white);">${r.roadType}</div>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline">
+              <div class="timeline-title">Activity Timeline</div>
+              ${r.timeline.map(t => `
+                <div class="timeline-item">
+                  <div class="timeline-dot ${t.done?'':'pending'}"></div>
+                  <div>
+                    <div class="timeline-text" style="color:${t.done?'var(--white)':'var(--muted)'};">${t.text}</div>
+                    <div class="timeline-time">${t.time}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            ${r.needsVerify ? `
+            <!-- Verify Alert -->
+            <div class="verify-alert">
+              <div class="verify-alert-icon">🔔</div>
+              <div class="verify-alert-text">
+                <strong>Authority marked this as fixed!</strong><br/>
+                2 of 3 nearby users have verified. One more confirmation needed.
+                If you're near this location, please verify.
+              </div>
+            </div>` : ''}
+
+            ${r.nearbyVerifiers.length > 0 ? `
+            <!-- Nearby Verifiers -->
+            <div class="nearby-verifiers">
+              <div class="nearby-title">👥 Community Verifiers — Nearby Users</div>
+              ${r.nearbyVerifiers.map(v => `
+                <div class="verifier-row">
+                  <div class="verifier-avatar">👤</div>
+                  <div class="verifier-name">${v.name}</div>
+                  <div class="verifier-dist">${v.dist}</div>
+                  <div class="verifier-status">${v.status}</div>
+                </div>
+              `).join('')}
+              <div style="font-size:.72rem;color:var(--muted);margin-top:.5rem;">
+                🔔 All nearby users within 2km automatically notified to verify fix
+              </div>
+            </div>` : ''}
+
+            <!-- Actions -->
+            <div class="card-actions">
+              <button class="action-btn" onclick="event.stopPropagation();shareReport('${r.id}')">📤 Share</button>
+              <button class="action-btn" onclick="event.stopPropagation();upvote('${r.id}')">👍 Upvote</button>
+              <button class="action-btn" onclick="event.stopPropagation();viewOnMap('${r.id}')">🗺️ View on Map</button>
+              ${r.needsVerify ? `<button class="action-btn verify" onclick="event.stopPropagation();verifyFix('${r.id}')">✅ Verify Fix</button>` : ''}
+              ${r.statusCode >= 6 ? `<button class="action-btn community" onclick="event.stopPropagation();">👥 2/3 Verified</button>` : ''}
+            </div>
+
+          </div>
+        </div>
+      `).join('');
+
+      // Trigger reveal
+      setTimeout(() => {
+        document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+      }, 50);
+    }
+
+    function toggleCard(id) {
+      const detail = document.getElementById('detail-' + id);
+      const card = document.getElementById('card-' + id);
+      if (expandedId === id) {
+        detail.classList.remove('visible');
+        card.classList.remove('expanded');
+        expandedId = null;
+      } else {
+        if (expandedId) {
+          document.getElementById('detail-' + expandedId)?.classList.remove('visible');
+          document.getElementById('card-' + expandedId)?.classList.remove('expanded');
+        }
+        detail.classList.add('visible');
+        card.classList.add('expanded');
+        expandedId = id;
+      }
+    }
+
+    function filterCards(filter, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      expandedId = null;
+      renderCards(filter);
+    }
+
+    function shareReport(id) {
+      alert('📤 Report ' + id + ' link copied! Share on WhatsApp to escalate.');
+    }
+    function upvote(id) { alert('👍 Upvoted! This boosts the complaint priority.'); }
+    function viewOnMap(id) { window.location.href = 'home.html'; }
+    function verifyFix(id) { alert('✅ Opening camera to verify fix for ' + id + '...\n\nIn the full version, you take a fresh photo and AI confirms if the road is repaired.'); }
+
+    // INIT
+    renderCards('all');
+
+    // Scroll reveal
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(r => observer.observe(r));
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

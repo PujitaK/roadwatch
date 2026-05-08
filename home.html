@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Live Map</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502; --yellow:#FFD32A;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; font-weight: 300; display: flex; flex-direction: column; }
+
+    /* NAV */
+    nav {
+      position: relative; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: rgba(7,17,31,0.95);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+      flex-shrink: 0;
+    }
+    .logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.2rem; letter-spacing:-.03em; color:var(--white); text-decoration:none; }
+    .logo span { color:var(--green); }
+    .nav-right { display:flex; align-items:center; gap:1rem; }
+    .live-badge { display:flex; align-items:center; gap:.4rem; background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.25); color:var(--green); padding:.3rem .8rem; border-radius:100px; font-size:.75rem; font-weight:500; }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.4);} }
+    .btn-report { background:var(--green); color:var(--navy); border:none; padding:.5rem 1.2rem; border-radius:100px; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:500; cursor:pointer; text-decoration:none; transition:all .2s; }
+    .btn-report:hover { background:var(--green2); transform:translateY(-1px); }
+    .nav-back { color:var(--muted); text-decoration:none; font-size:.85rem; transition:color .2s; }
+    .nav-back:hover { color:var(--white); }
+
+    /* LAYOUT */
+    .app-layout { display:flex; flex:1; overflow:hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 340px; flex-shrink:0;
+      background: var(--navy2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      z-index: 500;
+    }
+
+    .sidebar-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .sidebar-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1rem; letter-spacing:-.02em; margin-bottom:.8rem; }
+
+    /* FILTERS */
+    .filters { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .filter-btn {
+      padding:.3rem .8rem; border-radius:100px; font-size:.72rem; font-weight:500;
+      border:1px solid var(--border); background:transparent; color:var(--muted);
+      cursor:pointer; transition:all .2s; letter-spacing:.03em;
+    }
+    .filter-btn:hover { border-color:rgba(255,255,255,.2); color:var(--white); }
+    .filter-btn.active { background:var(--green); border-color:var(--green); color:var(--navy); }
+    .filter-btn.red.active { background:var(--red); border-color:var(--red); color:#fff; }
+    .filter-btn.orange.active { background:var(--orange); border-color:var(--orange); color:#fff; }
+
+    /* STATS ROW */
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); }
+    .mini-stat { text-align:center; }
+    .mini-stat-num { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:700; color:var(--white); }
+    .mini-stat-num.red { color:var(--red); }
+    .mini-stat-num.orange { color:var(--orange); }
+    .mini-stat-num.green { color:var(--green); }
+    .mini-stat-label { font-size:.68rem; color:var(--muted); margin-top:.15rem; text-transform:uppercase; letter-spacing:.04em; }
+
+    /* REPORTS LIST */
+    .reports-list { flex:1; overflow-y:auto; padding:.5rem; }
+    .reports-list::-webkit-scrollbar { width:4px; }
+    .reports-list::-webkit-scrollbar-track { background:transparent; }
+    .reports-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    .report-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:14px; padding:1rem 1.2rem;
+      margin-bottom:.6rem; cursor:pointer;
+      transition:all .25s;
+    }
+    .report-card:hover { border-color:rgba(0,232,122,.2); background:rgba(0,232,122,.03); transform:translateX(3px); }
+    .report-card.selected { border-color:var(--green); background:rgba(0,232,122,.05); }
+
+    .report-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
+    .damage-type { font-family:'Syne',sans-serif; font-size:.85rem; font-weight:600; letter-spacing:-.01em; }
+    .severity-badge { padding:.15rem .6rem; border-radius:100px; font-size:.68rem; font-weight:500; }
+    .sev-5,.sev-4 { background:rgba(255,71,87,.15); color:var(--red); border:1px solid rgba(255,71,87,.2); }
+    .sev-3 { background:rgba(255,165,2,.15); color:var(--orange); border:1px solid rgba(255,165,2,.2); }
+    .sev-2,.sev-1 { background:rgba(255,211,42,.15); color:var(--yellow); border:1px solid rgba(255,211,42,.2); }
+
+    .report-location { font-size:.78rem; color:var(--muted); margin-bottom:.4rem; }
+    .report-meta { display:flex; align-items:center; justify-content:space-between; }
+    .report-status { font-size:.7rem; font-weight:500; padding:.15rem .6rem; border-radius:100px; }
+    .status-filed { background:rgba(136,153,187,.1); color:var(--muted); border:1px solid rgba(136,153,187,.15); }
+    .status-progress { background:rgba(255,165,2,.1); color:var(--orange); border:1px solid rgba(255,165,2,.15); }
+    .status-fixed { background:rgba(0,232,122,.1); color:var(--green); border:1px solid rgba(0,232,122,.15); }
+    .status-verified { background:rgba(0,232,122,.2); color:var(--green); border:1px solid rgba(0,232,122,.3); }
+    .report-time { font-size:.68rem; color:var(--muted); }
+    .report-votes { font-size:.72rem; color:var(--muted); display:flex; align-items:center; gap:.3rem; }
+
+    /* MAP */
+    #map { flex:1; z-index:1; }
+
+    /* Leaflet dark override */
+    .leaflet-tile { filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
+    .leaflet-container { background:#07111F; }
+
+    /* DETAIL PANEL */
+    .detail-panel {
+      position:absolute; bottom:1.5rem; right:1.5rem;
+      width:320px; z-index:800;
+      background:var(--navy2); border:1px solid var(--border);
+      border-radius:20px; padding:1.5rem;
+      transform:translateY(20px); opacity:0;
+      transition:all .3s; pointer-events:none;
+      box-shadow:0 20px 60px rgba(0,0,0,.5);
+    }
+    .detail-panel.visible { transform:translateY(0); opacity:1; pointer-events:all; }
+    .detail-close { position:absolute; top:1rem; right:1rem; background:var(--card); border:1px solid var(--border); color:var(--muted); width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.8rem; transition:all .2s; }
+    .detail-close:hover { color:var(--white); border-color:rgba(255,255,255,.2); }
+    .detail-type { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:-.02em; margin-bottom:.3rem; }
+    .detail-loc { font-size:.82rem; color:var(--muted); margin-bottom:1rem; }
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:1rem; }
+    .detail-item { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:.7rem; }
+    .detail-item-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
+    .detail-item-val { font-size:.88rem; font-weight:500; color:var(--white); }
+    .detail-pipeline { margin-top:.8rem; }
+    .pipeline-mini { display:flex; align-items:center; gap:0; }
+    .pm-step { width:28px; height:28px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.65rem; background:var(--navy3); flex-shrink:0; }
+    .pm-step.done { border-color:var(--green); background:rgba(0,232,122,.15); color:var(--green); }
+    .pm-step.current { border-color:var(--green); background:var(--green); color:var(--navy); }
+    .pm-line { flex:1; height:2px; background:var(--border); }
+    .pm-line.done { background:var(--green); }
+    .detail-actions { display:flex; gap:.6rem; margin-top:1rem; }
+    .detail-btn { flex:1; padding:.6rem; border-radius:10px; font-size:.78rem; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--card); color:var(--white); font-family:'DM Sans',sans-serif; }
+    .detail-btn:hover { border-color:rgba(0,232,122,.3); color:var(--green); }
+    .detail-btn.primary { background:var(--green); border-color:var(--green); color:var(--navy); }
+    .detail-btn.primary:hover { background:var(--green2); }
+
+    /* HEATMAP TOGGLE */
+    .map-controls {
+      position:absolute; top:1rem; right:1rem; z-index:700;
+      display:flex; flex-direction:column; gap:.5rem;
+    }
+    .map-ctrl-btn {
+      background:rgba(13,30,53,0.92); border:1px solid var(--border);
+      color:var(--muted); padding:.5rem .9rem; border-radius:10px;
+      font-size:.75rem; font-weight:500; cursor:pointer;
+      backdrop-filter:blur(12px); transition:all .2s;
+      white-space:nowrap;
+    }
+    .map-ctrl-btn:hover { border-color:rgba(0,232,122,.3); color:var(--white); }
+    .map-ctrl-btn.active { border-color:var(--green); color:var(--green); background:rgba(0,232,122,.08); }
+
+    /* SEARCH */
+    .map-search {
+      position:absolute; top:1rem; left:1rem; z-index:700;
+      background:rgba(13,30,53,0.92); border:1px solid var(--border);
+      border-radius:12px; padding:.6rem 1rem;
+      display:flex; align-items:center; gap:.6rem;
+      backdrop-filter:blur(12px); width:260px;
+    }
+    .map-search input {
+      background:transparent; border:none; outline:none;
+      color:var(--white); font-family:'DM Sans',sans-serif;
+      font-size:.85rem; width:100%;
+    }
+    .map-search input::placeholder { color:var(--muted); }
+
+    /* LEGEND */
+    .legend {
+      position:absolute; bottom:1.5rem; left:360px; z-index:700;
+      background:rgba(13,30,53,0.92); border:1px solid var(--border);
+      border-radius:12px; padding:.8rem 1rem;
+      backdrop-filter:blur(12px);
+      display:flex; gap:1rem; align-items:center;
+    }
+    .legend-item { display:flex; align-items:center; gap:.4rem; font-size:.72rem; color:var(--muted); }
+    .legend-dot { width:10px; height:10px; border-radius:50%; }
+
+    /* CHATBOT */
+    .chatbot-btn { position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; border-radius:50%; background:var(--green); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.3rem; box-shadow:0 8px 32px rgba(0,232,122,.35); z-index:9999; transition:all .3s; }
+    .chatbot-btn:hover { transform:scale(1.1); }
+
+    @media(max-width:768px){
+      .sidebar { display:none; }
+      .legend { left:1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+      <a href="index.html" class="nav-back">← Back</a>
+      <a href="index.html" class="logo">Road<span>Watch</span></a>
+    </div>
+    <div class="nav-right">
+      <div class="live-badge"><div class="live-dot"></div> Live Map</div>
+      <a href="report.html" class="btn-report">📸 Report</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Coimbatore — Road Reports</div>
+        <div class="filters">
+          <button class="filter-btn active" onclick="filterReports('all', this)">All</button>
+          <button class="filter-btn red" onclick="filterReports('critical', this)">🔴 Critical</button>
+          <button class="filter-btn orange" onclick="filterReports('moderate', this)">🟠 Moderate</button>
+          <button class="filter-btn" onclick="filterReports('resolved', this)">✅ Resolved</button>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="mini-stat">
+          <div class="mini-stat-num red">34</div>
+          <div class="mini-stat-label">Critical</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-num orange">47</div>
+          <div class="mini-stat-label">In Progress</div>
+        </div>
+        <div class="mini-stat">
+          <div class="mini-stat-num green">128</div>
+          <div class="mini-stat-label">Resolved</div>
+        </div>
+      </div>
+
+      <div class="reports-list" id="reportsList"></div>
+    </div>
+
+    <!-- MAP -->
+    <div style="position:relative;flex:1;">
+      <div id="map"></div>
+
+      <!-- Search -->
+      <div class="map-search">
+        <span style="color:var(--muted);font-size:1rem;">🔍</span>
+        <input type="text" placeholder="Search road or area in Coimbatore..."/>
+      </div>
+
+      <!-- Controls -->
+      <div class="map-controls">
+        <button class="map-ctrl-btn active" id="btnAll" onclick="setView('all')">🗺️ All Reports</button>
+        <button class="map-ctrl-btn" id="btnHeat" onclick="setView('heat')">🔥 Heatmap</button>
+        <button class="map-ctrl-btn" id="btnBudget" onclick="setView('budget')">💰 Budget Overlay</button>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#FF4757;"></div>Critical</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFA502;"></div>Moderate</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFD32A;"></div>Minor</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00E87A;"></div>Resolved</div>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="detail-panel" id="detailPanel">
+        <button class="detail-close" onclick="closeDetail()">✕</button>
+        <div class="detail-type" id="detailType">Pothole</div>
+        <div class="detail-loc" id="detailLoc">Loading...</div>
+        <div class="detail-grid">
+          <div class="detail-item"><div class="detail-item-label">Severity</div><div class="detail-item-val" id="detailSev">—</div></div>
+          <div class="detail-item"><div class="detail-item-label">Road Type</div><div class="detail-item-val" id="detailRoad">—</div></div>
+          <div class="detail-item"><div class="detail-item-label">Authority</div><div class="detail-item-val" id="detailAuth">—</div></div>
+          <div class="detail-item"><div class="detail-item-label">Reported</div><div class="detail-item-val" id="detailDate">—</div></div>
+        </div>
+        <div class="detail-pipeline">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em;">Status Pipeline</div>
+          <div class="pipeline-mini" id="detailPipeline"></div>
+        </div>
+        <div class="detail-actions">
+          <button class="detail-btn" onclick="upvoteReport()">👍 Upvote</button>
+          <button class="detail-btn" onclick="shareReport()">📤 Share</button>
+          <button class="detail-btn primary" onclick="verifyReport()">✅ Verify Fix</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="chatbot-btn" onclick="alert('RoadBot: Ask me anything about Coimbatore roads! 🤖')">🤖</button>
+
+  <script>
+    // ── DEMO DATA — Coimbatore roads
+    const reports = [
+      { id:1, type:'Pothole', location:'Avinashi Road — NH-544', area:'Peelamedu', lat:11.0168, lng:77.0027, severity:5, roadType:'NH-544', authority:'NHAI — Coimbatore Division', status:'In Progress', statusCode:3, date:'2 days ago', votes:47, color:'#FF4757' },
+      { id:2, type:'Broken Divider', location:'Trichy Road — NH-83', area:'Singanallur', lat:11.0018, lng:77.0200, severity:4, roadType:'NH-83', authority:'NHAI — Coimbatore Division', status:'Filed', statusCode:1, date:'5 hours ago', votes:23, color:'#FF4757' },
+      { id:3, type:'Faded Markings', location:'Mettupalayam Road', area:'Papanasam', lat:11.0780, lng:76.9690, severity:3, roadType:'SH-15', authority:'PWD — Coimbatore', status:'Acknowledged', statusCode:2, date:'1 week ago', votes:15, color:'#FFA502' },
+      { id:4, type:'Waterlogging', location:'DB Road', area:'RS Puram', lat:11.0132, lng:76.9570, severity:3, roadType:'Municipal', authority:'Coimbatore City Municipal Corp.', status:'In Progress', statusCode:3, date:'3 days ago', votes:31, color:'#FFA502' },
+      { id:5, type:'Pothole', location:'Sathy Road', area:'Ganapathy', lat:11.0470, lng:76.9990, severity:4, roadType:'SH-20', authority:'PWD — Coimbatore', status:'Filed', statusCode:1, date:'1 day ago', votes:19, color:'#FF4757' },
+      { id:6, type:'Missing Signboard', location:'Palladam Road', area:'Sowripalayam', lat:10.9850, lng:77.0150, severity:2, roadType:'MDR', authority:'Highways Dept.', status:'Community Verified ✅', statusCode:6, date:'2 weeks ago', votes:8, color:'#00E87A' },
+      { id:7, type:'Crack', location:'Ukkadam Bypass', area:'Ukkadam', lat:10.9960, lng:76.9760, severity:2, roadType:'Municipal', authority:'Coimbatore City Municipal Corp.', status:'Fixed', statusCode:5, date:'3 weeks ago', votes:12, color:'#00E87A' },
+      { id:8, type:'Pothole', location:'Race Course Road', area:'Race Course', lat:11.0094, lng:76.9631, severity:5, roadType:'Municipal', authority:'Coimbatore City Municipal Corp.', status:'Filed', statusCode:1, date:'6 hours ago', votes:52, color:'#FF4757' },
+      { id:9, type:'Broken Light', location:'Nehru Street', area:'Town Hall', lat:11.0168, lng:76.9558, severity:3, roadType:'Municipal', authority:'Coimbatore City Municipal Corp.', status:'In Progress', statusCode:3, date:'4 days ago', votes:28, color:'#FFA502' },
+      { id:10, type:'Pothole', location:'Cowley Brown Road', area:'RS Puram', lat:11.0059, lng:76.9544, severity:4, roadType:'Municipal', authority:'Coimbatore City Municipal Corp.', status:'Acknowledged', statusCode:2, date:'2 days ago', votes:35, color:'#FF4757' },
+    ];
+
+    const pipelineSteps = ['📝','🔍','📬','👁️','🔧','🛠️','✅'];
+    const pipelineLabels = ['Filed','Identified','Sent','Acknowledged','In Progress','Fixed','Verified'];
+
+    // ── MAP INIT — centered on Coimbatore
+    const map = L.map('map', { zoomControl: false }).setView([11.0168, 76.9558], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // ── CREATE MARKERS
+    const markers = {};
+
+    function createIcon(color) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="
+          width:18px;height:18px;border-radius:50%;
+          background:${color};
+          border:3px solid rgba(255,255,255,0.8);
+          box-shadow:0 2px 8px rgba(0,0,0,0.5);
+          transition:transform .2s;
+        "></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+      });
+    }
+
+    reports.forEach(r => {
+      const marker = L.marker([r.lat, r.lng], { icon: createIcon(r.color) })
+        .addTo(map)
+        .on('click', () => showDetail(r));
+      markers[r.id] = marker;
+    });
+
+    // ── RENDER SIDEBAR LIST
+    function renderList(filter) {
+      const list = document.getElementById('reportsList');
+      let filtered = reports;
+      if (filter === 'critical') filtered = reports.filter(r => r.severity >= 4);
+      if (filter === 'moderate') filtered = reports.filter(r => r.severity === 3);
+      if (filter === 'resolved') filtered = reports.filter(r => r.statusCode >= 5);
+
+      list.innerHTML = filtered.map(r => `
+        <div class="report-card" id="card-${r.id}" onclick="showDetail(reports.find(x=>x.id===${r.id}))">
+          <div class="report-card-top">
+            <span class="damage-type">${r.type}</span>
+            <span class="severity-badge sev-${r.severity}">Sev ${r.severity}/5</span>
+          </div>
+          <div class="report-location">📍 ${r.location}, ${r.area}</div>
+          <div class="report-meta">
+            <span class="report-status ${getStatusClass(r.statusCode)}">${r.status}</span>
+            <span class="report-votes">👍 ${r.votes}</span>
+            <span class="report-time">${r.date}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function getStatusClass(code) {
+      if (code === 1) return 'status-filed';
+      if (code >= 5) return 'status-verified';
+      if (code >= 3) return 'status-progress';
+      return 'status-filed';
+    }
+
+    renderList('all');
+
+    // ── FILTER
+    let currentFilter = 'all';
+    function filterReports(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderList(filter);
+    }
+
+    // ── SHOW DETAIL
+    function showDetail(r) {
+      document.getElementById('detailType').textContent = r.type;
+      document.getElementById('detailLoc').textContent = '📍 ' + r.location + ', ' + r.area;
+      document.getElementById('detailSev').textContent = r.severity + ' / 5 🔴'.slice(0, r.severity >= 4 ? 7 : 0) || r.severity + '/5';
+      document.getElementById('detailSev').textContent = r.severity + '/5';
+      document.getElementById('detailSev').style.color = r.color;
+      document.getElementById('detailRoad').textContent = r.roadType;
+      document.getElementById('detailAuth').textContent = r.authority;
+      document.getElementById('detailDate').textContent = r.date;
+
+      // Pipeline
+      const pipe = document.getElementById('detailPipeline');
+      pipe.innerHTML = pipelineSteps.map((s, i) => {
+        const isDone = i < r.statusCode - 1;
+        const isCurrent = i === r.statusCode - 1;
+        const cls = isDone ? 'done' : isCurrent ? 'current' : '';
+        const line = i < pipelineSteps.length - 1
+          ? `<div class="pm-line ${isDone ? 'done' : ''}"></div>`
+          : '';
+        return `<div class="pm-step ${cls}" title="${pipelineLabels[i]}">${s}</div>${line}`;
+      }).join('');
+
+      document.getElementById('detailPanel').classList.add('visible');
+
+      // Pan map to marker
+      map.flyTo([r.lat, r.lng], 15, { duration: 1 });
+
+      // Highlight card
+      document.querySelectorAll('.report-card').forEach(c => c.classList.remove('selected'));
+      const card = document.getElementById('card-' + r.id);
+      if (card) { card.classList.add('selected'); card.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+    }
+
+    function closeDetail() {
+      document.getElementById('detailPanel').classList.remove('visible');
+    }
+
+    // ── MAP VIEW TOGGLE
+    function setView(mode) {
+      document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+      if (mode === 'heat') {
+        alert('🔥 Heatmap mode: In the full version, damage density is visualized as a heat overlay. Coming in Week 3!');
+      } else if (mode === 'budget') {
+        alert('💰 Budget Overlay: Shows government spending vs damage density per road segment. Coming in Week 3!');
+      }
+    }
+
+    function upvoteReport() { alert('👍 Upvoted! This complaint gets higher priority.'); }
+    function shareReport() {
+      if (navigator.share) {
+        navigator.share({ title:'RoadWatch Report', text:'Check this road damage report on RoadWatch!', url:window.location.href });
+      } else {
+        alert('📤 Link copied to clipboard! Share it on WhatsApp.');
+      }
+    }
+    function verifyReport() { alert('✅ Opening verification camera... (Full feature in Week 2!)'); }
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

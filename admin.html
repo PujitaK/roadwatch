@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Authority Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+      --red:#FF4757; --orange:#FFA502; --yellow:#FFD32A;
+    }
+    html { scroll-behavior:smooth; }
+    body { background:var(--navy); color:var(--white); font-family:'DM Sans',sans-serif; font-weight:300; min-height:100vh; display:flex; }
+
+    /* SIDEBAR NAV */
+    .sidenav { width:220px; background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:1.5rem 1rem; position:fixed; top:0; left:0; bottom:0; z-index:100; }
+    .sidenav-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:1.1rem; letter-spacing:-.03em; color:var(--white); margin-bottom:.2rem; }
+    .sidenav-logo span { color:var(--green); }
+    .sidenav-sub { font-size:.7rem; color:var(--muted); margin-bottom:2rem; }
+    .sidenav-label { font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:.5rem; margin-top:1rem; }
+    .sidenav-item { display:flex; align-items:center; gap:.7rem; padding:.65rem .9rem; border-radius:10px; color:var(--muted); text-decoration:none; font-size:.85rem; transition:all .2s; cursor:pointer; margin-bottom:.2rem; border:none; background:transparent; width:100%; text-align:left; font-family:'DM Sans',sans-serif; }
+    .sidenav-item:hover { background:var(--card); color:var(--white); }
+    .sidenav-item.active { background:rgba(0,232,122,.1); color:var(--green); border:1px solid rgba(0,232,122,.15); }
+    .sidenav-item .icon { font-size:1rem; width:20px; text-align:center; }
+    .sidenav-badge { margin-left:auto; background:var(--red); color:#fff; font-size:.6rem; font-weight:700; padding:.1rem .4rem; border-radius:100px; }
+    .sidenav-bottom { margin-top:auto; }
+    .authority-info { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.8rem; margin-bottom:1rem; }
+    .auth-name { font-size:.82rem; font-weight:500; color:var(--white); margin-bottom:.2rem; }
+    .auth-dept { font-size:.7rem; color:var(--muted); }
+
+    /* MAIN */
+    .main { margin-left:220px; flex:1; padding:2rem; min-height:100vh; }
+
+    /* TOP BAR */
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; }
+    .topbar-left h1 { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; letter-spacing:-.03em; }
+    .topbar-left p { color:var(--muted); font-size:.85rem; margin-top:.2rem; }
+    .topbar-right { display:flex; align-items:center; gap:1rem; }
+    .live-badge { display:flex; align-items:center; gap:.4rem; background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.25); color:var(--green); padding:.35rem .9rem; border-radius:100px; font-size:.75rem; font-weight:500; }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.4);} }
+    .btn-sm { padding:.45rem 1rem; border-radius:100px; font-size:.8rem; font-weight:500; cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; border:1px solid var(--border); background:var(--card); color:var(--white); }
+    .btn-sm:hover { border-color:rgba(255,255,255,.2); }
+    .btn-sm.primary { background:var(--green); border-color:var(--green); color:var(--navy); }
+    .btn-sm.primary:hover { background:var(--green2); }
+
+    /* STATS GRID */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:2rem; }
+    .stat-card { background:var(--navy2); border:1px solid var(--border); border-radius:16px; padding:1.3rem; position:relative; overflow:hidden; transition:all .3s; }
+    .stat-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.1); }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .stat-card.red::before { background:linear-gradient(90deg,var(--red),transparent); }
+    .stat-card.orange::before { background:linear-gradient(90deg,var(--orange),transparent); }
+    .stat-card.green::before { background:linear-gradient(90deg,var(--green),transparent); }
+    .stat-card.blue::before { background:linear-gradient(90deg,#6699FF,transparent); }
+    .stat-icon { font-size:1.3rem; margin-bottom:.7rem; }
+    .stat-num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; line-height:1; margin-bottom:.2rem; }
+    .stat-num.red { color:var(--red); }
+    .stat-num.orange { color:var(--orange); }
+    .stat-num.green { color:var(--green); }
+    .stat-num.blue { color:#6699FF; }
+    .stat-label { font-size:.75rem; color:var(--muted); }
+    .stat-change { font-size:.7rem; margin-top:.5rem; }
+    .stat-change.up { color:var(--red); }
+    .stat-change.down { color:var(--green); }
+
+    /* MAIN GRID */
+    .content-grid { display:grid; grid-template-columns:1fr 340px; gap:1.5rem; }
+
+    /* SECTION CARD */
+    .section-card { background:var(--navy2); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+    .section-header { display:flex; align-items:center; justify-content:space-between; padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); }
+    .section-title { font-family:'Syne',sans-serif; font-size:.95rem; font-weight:700; letter-spacing:-.02em; }
+    .section-count { font-size:.75rem; color:var(--muted); }
+
+    /* COMPLAINT TABLE */
+    .complaint-filters { display:flex; gap:.4rem; padding:.8rem 1.5rem; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .cf-btn { padding:.25rem .7rem; border-radius:100px; font-size:.72rem; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .cf-btn:hover { color:var(--white); border-color:rgba(255,255,255,.2); }
+    .cf-btn.active { background:var(--green); border-color:var(--green); color:var(--navy); font-weight:500; }
+
+    .complaint-list { max-height:480px; overflow-y:auto; }
+    .complaint-list::-webkit-scrollbar { width:3px; }
+    .complaint-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    .complaint-row { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); transition:background .2s; cursor:pointer; }
+    .complaint-row:hover { background:var(--card); }
+    .complaint-row:last-child { border-bottom:none; }
+    .cr-icon { width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+    .cr-info { flex:1; }
+    .cr-type { font-size:.85rem; font-weight:500; color:var(--white); margin-bottom:.2rem; }
+    .cr-loc { font-size:.72rem; color:var(--muted); margin-bottom:.3rem; }
+    .cr-meta { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+    .cr-right { text-align:right; flex-shrink:0; }
+    .cr-id { font-size:.65rem; color:var(--muted); font-family:'Syne',sans-serif; letter-spacing:.03em; margin-bottom:.2rem; }
+    .cr-date { font-size:.68rem; color:var(--muted); }
+    .cr-upvotes { font-size:.68rem; color:var(--muted); }
+
+    /* BADGES */
+    .badge { padding:.18rem .6rem; border-radius:100px; font-size:.68rem; font-weight:500; }
+    .b-new { background:rgba(102,153,255,.1); color:#6699FF; border:1px solid rgba(102,153,255,.2); }
+    .b-assigned { background:rgba(255,165,2,.1); color:var(--orange); border:1px solid rgba(255,165,2,.2); }
+    .b-progress { background:rgba(255,165,2,.15); color:var(--orange); border:1px solid rgba(255,165,2,.25); }
+    .b-fixed { background:rgba(0,232,122,.1); color:var(--green); border:1px solid rgba(0,232,122,.2); }
+    .b-verified { background:rgba(0,232,122,.2); color:var(--green); border:1px solid rgba(0,232,122,.3); }
+    .b-sev5 { background:rgba(255,71,87,.12); color:var(--red); border:1px solid rgba(255,71,87,.2); }
+    .b-sev4 { background:rgba(255,71,87,.08); color:#FF8C94; border:1px solid rgba(255,71,87,.15); }
+    .b-sev3 { background:rgba(255,165,2,.1); color:var(--orange); border:1px solid rgba(255,165,2,.15); }
+
+    /* ACTION MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); z-index:1000; display:none; align-items:center; justify-content:center; }
+    .modal-overlay.visible { display:flex; }
+    .modal { background:var(--navy2); border:1px solid var(--border); border-radius:24px; padding:2rem; width:480px; max-width:95vw; animation:modalIn .3s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes modalIn { from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;} }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+    .modal-title { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
+    .modal-close { background:var(--card); border:1px solid var(--border); color:var(--muted); width:30px; height:30px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.85rem; transition:all .2s; }
+    .modal-close:hover { color:var(--white); }
+    .modal-field { margin-bottom:1.2rem; }
+    .modal-field label { display:block; font-size:.78rem; color:var(--muted); margin-bottom:.4rem; }
+    .modal-field select, .modal-field input, .modal-field textarea { width:100%; background:var(--navy3); border:1px solid var(--border); color:var(--white); font-family:'DM Sans',sans-serif; font-size:.88rem; padding:.75rem 1rem; border-radius:10px; outline:none; transition:border-color .2s; }
+    .modal-field select:focus, .modal-field input:focus, .modal-field textarea:focus { border-color:rgba(0,232,122,.4); }
+    .modal-field select option { background:var(--navy2); }
+    .modal-field textarea { min-height:80px; resize:vertical; }
+    .modal-actions { display:flex; gap:.8rem; margin-top:1.5rem; }
+    .modal-btn { flex:1; padding:.75rem; border-radius:12px; font-family:'DM Sans',sans-serif; font-size:.88rem; font-weight:500; cursor:pointer; transition:all .2s; border:1px solid var(--border); background:var(--card); color:var(--white); }
+    .modal-btn.primary { background:var(--green); border-color:var(--green); color:var(--navy); }
+    .modal-btn.primary:hover { background:var(--green2); }
+    .modal-btn:hover { border-color:rgba(255,255,255,.2); }
+
+    /* RIGHT COLUMN */
+    .right-col { display:flex; flex-direction:column; gap:1.5rem; }
+
+    /* PERFORMANCE */
+    .perf-item { display:flex; align-items:center; gap:1rem; padding:.9rem 1.2rem; border-bottom:1px solid var(--border); }
+    .perf-item:last-child { border-bottom:none; }
+    .perf-rank { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; color:var(--muted); width:24px; flex-shrink:0; }
+    .perf-name { font-size:.82rem; color:var(--white); flex:1; }
+    .perf-bar-wrap { width:80px; }
+    .perf-bar-track { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+    .perf-bar-fill { height:100%; border-radius:2px; background:var(--green); }
+    .perf-count { font-size:.72rem; color:var(--muted); width:30px; text-align:right; }
+
+    /* ALERT ITEMS */
+    .alert-item { display:flex; gap:.8rem; padding:.9rem 1.2rem; border-bottom:1px solid var(--border); align-items:flex-start; }
+    .alert-item:last-child { border-bottom:none; }
+    .alert-icon { font-size:1rem; margin-top:.1rem; flex-shrink:0; }
+    .alert-text { font-size:.78rem; color:var(--white); line-height:1.4; flex:1; }
+    .alert-time { font-size:.68rem; color:var(--muted); margin-top:.2rem; }
+    .alert-dot { width:6px; height:6px; border-radius:50%; background:var(--red); flex-shrink:0; margin-top:.3rem; }
+
+    /* CHART */
+    .chart-area { padding:1.2rem 1.5rem; }
+    .chart-bars { display:flex; align-items:flex-end; gap:.5rem; height:100px; }
+    .chart-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:.3rem; }
+    .chart-bar { width:100%; border-radius:4px 4px 0 0; transition:height .8s ease; min-height:4px; }
+    .chart-label { font-size:.62rem; color:var(--muted); }
+    .chart-val { font-size:.65rem; color:var(--white); }
+    .chart-legend { display:flex; gap:1rem; margin-top:.8rem; }
+    .chart-legend-item { display:flex; align-items:center; gap:.3rem; font-size:.7rem; color:var(--muted); }
+    .chart-legend-dot { width:8px; height:8px; border-radius:2px; }
+
+    @media(max-width:1100px) {
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .content-grid { grid-template-columns:1fr; }
+    }
+    @media(max-width:768px) {
+      .sidenav { display:none; }
+      .main { margin-left:0; padding:1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDE NAV -->
+  <div class="sidenav">
+    <div class="sidenav-logo">Road<span>Watch</span></div>
+    <div class="sidenav-sub">Authority Portal</div>
+
+    <div class="sidenav-label">Main</div>
+    <button class="sidenav-item active"><span class="icon">🏠</span> Dashboard</button>
+    <button class="sidenav-item" onclick="alert('Complaints view — same as below, full screen')"><span class="icon">📋</span> All Complaints <span class="sidenav-badge">8</span></button>
+    <button class="sidenav-item" onclick="alert('Field team management')"><span class="icon">👷</span> Field Teams</button>
+    <button class="sidenav-item" onclick="alert('Map view of all complaints')"><span class="icon">🗺️</span> Map View</button>
+
+    <div class="sidenav-label">Reports</div>
+    <button class="sidenav-item" onclick="alert('Monthly analytics report')"><span class="icon">📊</span> Analytics</button>
+    <button class="sidenav-item" onclick="alert('Resolution time reports')"><span class="icon">⏱️</span> Resolution Times</button>
+    <button class="sidenav-item" onclick="alert('Budget allocation view')"><span class="icon">💰</span> Budget View</button>
+
+    <div class="sidenav-bottom">
+      <div class="authority-info">
+        <div class="auth-name">Exe. Engineer — Zone 3</div>
+        <div class="auth-dept">Coimbatore City Municipal Corp.</div>
+      </div>
+      <a href="index.html" class="sidenav-item"><span class="icon">←</span> Back to RoadWatch</a>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Authority Dashboard</h1>
+        <p>Coimbatore City Municipal Corporation — Zone 3 · Thursday, 7 May 2026</p>
+      </div>
+      <div class="topbar-right">
+        <div class="live-badge"><div class="live-dot"></div>Live</div>
+        <button class="btn-sm" onclick="alert('Generating PDF report...')">📄 Export Report</button>
+        <button class="btn-sm primary" onclick="alert('All field teams notified')">📢 Notify Teams</button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card red">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-num red">8</div>
+        <div class="stat-label">New Complaints Today</div>
+        <div class="stat-change up">↑ 3 since yesterday</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-icon">🔧</div>
+        <div class="stat-num orange">23</div>
+        <div class="stat-label">In Progress</div>
+        <div class="stat-change up">↑ 5 this week</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon">✅</div>
+        <div class="stat-num green">47</div>
+        <div class="stat-label">Resolved This Month</div>
+        <div class="stat-change down">↓ Avg 4.2 days/fix</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-num blue">6</div>
+        <div class="stat-label">Overdue (30+ days)</div>
+        <div class="stat-change up">↑ Needs attention</div>
+      </div>
+    </div>
+
+    <!-- CONTENT GRID -->
+    <div class="content-grid">
+
+      <!-- COMPLAINTS -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Incoming Complaints</div>
+            <div class="section-count">Showing 8 active complaints — Coimbatore Municipal Zone 3</div>
+          </div>
+          <button class="btn-sm" onclick="alert('Sorted by priority')">⬆️ Sort: Priority</button>
+        </div>
+
+        <div class="complaint-filters">
+          <button class="cf-btn active" onclick="cfFilter('all',this)">All (34)</button>
+          <button class="cf-btn" onclick="cfFilter('new',this)">🔵 New (8)</button>
+          <button class="cf-btn" onclick="cfFilter('progress',this)">🟠 In Progress (23)</button>
+          <button class="cf-btn" onclick="cfFilter('overdue',this)">🔴 Overdue (6)</button>
+          <button class="cf-btn" onclick="cfFilter('fixed',this)">✅ Fixed (47)</button>
+        </div>
+
+        <div class="complaint-list" id="complaintList"></div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="right-col">
+
+        <!-- WEEKLY CHART -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Weekly Overview</div>
+            <div class="section-count">Last 7 days</div>
+          </div>
+          <div class="chart-area">
+            <div class="chart-bars" id="chartBars"></div>
+            <div class="chart-legend">
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--red);"></div>Received</div>
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--green);"></div>Resolved</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">⚠️ Priority Alerts</div>
+            <div class="section-count">Needs action</div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-dot"></div>
+            <div class="alert-icon">🕳️</div>
+            <div>
+              <div class="alert-text"><strong>Critical pothole — Race Course Road</strong> has 52 upvotes and is unassigned for 2 days</div>
+              <div class="alert-time">2 days ago · RW-CBE-2026-0808</div>
+            </div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-dot"></div>
+            <div class="alert-icon">⏰</div>
+            <div>
+              <div class="alert-text"><strong>6 complaints</strong> have exceeded the 30-day resolution deadline</div>
+              <div class="alert-time">Auto-flagged today</div>
+            </div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-dot" style="background:var(--orange);"></div>
+            <div class="alert-icon">👥</div>
+            <div>
+              <div class="alert-text"><strong>DB Road waterlogging fix</strong> needs 1 more community verification</div>
+              <div class="alert-time">Marked fixed 2 days ago</div>
+            </div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-dot" style="background:var(--green);"></div>
+            <div class="alert-icon">✅</div>
+            <div>
+              <div class="alert-text"><strong>Race Course Road markings</strong> community verified by 3 users</div>
+              <div class="alert-time">8 days ago — Closed</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEAM PERFORMANCE -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Field Team Performance</div>
+            <div class="section-count">This month</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-rank">1</div>
+            <div class="perf-name">Team Alpha — Pothole Unit</div>
+            <div class="perf-bar-wrap"><div class="perf-bar-track"><div class="perf-bar-fill" style="width:90%;"></div></div></div>
+            <div class="perf-count" style="color:var(--green);">18</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-rank">2</div>
+            <div class="perf-name">Team Beta — Roads Unit</div>
+            <div class="perf-bar-wrap"><div class="perf-bar-track"><div class="perf-bar-fill" style="width:70%;"></div></div></div>
+            <div class="perf-count">14</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-rank">3</div>
+            <div class="perf-name">Team Gamma — Lighting</div>
+            <div class="perf-bar-wrap"><div class="perf-bar-track"><div class="perf-bar-fill" style="width:55%;"></div></div></div>
+            <div class="perf-count">11</div>
+          </div>
+          <div class="perf-item">
+            <div class="perf-rank">4</div>
+            <div class="perf-name">Team Delta — Markings</div>
+            <div class="perf-bar-wrap"><div class="perf-bar-track"><div class="perf-bar-fill" style="width:35%;background:var(--orange);"></div></div></div>
+            <div class="perf-count" style="color:var(--orange);">7</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSIGN MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Assign Complaint</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.9rem;margin-bottom:1.2rem;">
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:.2rem;">Complaint</div>
+        <div style="font-size:.9rem;font-weight:500;" id="modalComplaintTitle">Pothole — Race Course Road</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;" id="modalComplaintId">RW-CBE-2026-0808</div>
+      </div>
+      <div class="modal-field">
+        <label>Assign to Field Team</label>
+        <select>
+          <option>Team Alpha — Pothole &amp; Surface Unit</option>
+          <option>Team Beta — General Roads Unit</option>
+          <option>Team Gamma — Lighting &amp; Signage</option>
+          <option>Team Delta — Markings Unit</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Priority Level</label>
+        <select>
+          <option>🔴 Critical — Fix within 48 hours</option>
+          <option>🟠 High — Fix within 1 week</option>
+          <option>🟡 Normal — Fix within 2 weeks</option>
+          <option>🟢 Low — Fix within 1 month</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Deadline Date</label>
+        <input type="date"/>
+      </div>
+      <div class="modal-field">
+        <label>Notes to Field Team</label>
+        <textarea placeholder="Any specific instructions for the team..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn" onclick="closeModal()">Cancel</button>
+        <button class="modal-btn primary" onclick="assignComplaint()">✅ Assign &amp; Notify Team</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const complaints = [
+      { id:'RW-CBE-2026-0847', type:'Pothole', icon:'🕳️', loc:'Race Course Road near Collector Office', sev:5, sevClass:'b-sev5', sevLabel:'Critical', status:'New', statusClass:'b-new', date:'6 hrs ago', upvotes:52, assigned:false },
+      { id:'RW-CBE-2026-0839', type:'Broken Divider', icon:'🚧', loc:'Trichy Road opp. Tidel Park', sev:4, sevClass:'b-sev4', sevLabel:'High', status:'New', statusClass:'b-new', date:'14 hrs ago', upvotes:23, assigned:false },
+      { id:'RW-CBE-2026-0831', type:'Waterlogging', icon:'💧', loc:'DB Road near Vivekananda Hall', sev:3, sevClass:'b-sev3', sevLabel:'Moderate', status:'In Progress', statusClass:'b-progress', date:'3 days ago', upvotes:31, assigned:true },
+      { id:'RW-CBE-2026-0828', type:'Crack', icon:'🪨', loc:'Cowley Brown Road, RS Puram', sev:4, sevClass:'b-sev4', sevLabel:'High', status:'In Progress', statusClass:'b-progress', date:'2 days ago', upvotes:35, assigned:true },
+      { id:'RW-CBE-2026-0820', type:'Broken Light', icon:'💡', loc:'Nehru Street, Town Hall area', sev:3, sevClass:'b-sev3', sevLabel:'Moderate', status:'Assigned', statusClass:'b-assigned', date:'4 days ago', upvotes:28, assigned:true },
+      { id:'RW-CBE-2026-0815', type:'Faded Markings', icon:'🎨', loc:'Sathy Road near Ganapathy', sev:2, sevClass:'b-sev3', sevLabel:'Low', status:'Fixed', statusClass:'b-fixed', date:'3 weeks ago', upvotes:12, assigned:true },
+      { id:'RW-CBE-2026-0803', type:'Pothole', icon:'🕳️', loc:'Palladam Road, Sowripalayam', sev:3, sevClass:'b-sev3', sevLabel:'Moderate', status:'New', statusClass:'b-new', date:'1 day ago', upvotes:19, assigned:false },
+      { id:'RW-CBE-2026-0799', type:'Missing Sign', icon:'🪧', loc:'Mettupalayam Road, Papanasam', sev:2, sevClass:'b-sev3', sevLabel:'Low', status:'Verified ✅', statusClass:'b-verified', date:'1 month ago', upvotes:8, assigned:true },
+    ];
+
+    let selectedComplaint = null;
+
+    function renderComplaints(filter) {
+      let filtered = complaints;
+      if (filter === 'new') filtered = complaints.filter(c => c.status === 'New');
+      if (filter === 'progress') filtered = complaints.filter(c => c.status === 'In Progress' || c.status === 'Assigned');
+      if (filter === 'overdue') filtered = complaints.filter(c => c.sev >= 4 && !c.assigned);
+      if (filter === 'fixed') filtered = complaints.filter(c => c.status === 'Fixed' || c.status.includes('Verified'));
+
+      document.getElementById('complaintList').innerHTML = filtered.map(c => `
+        <div class="complaint-row" onclick="openModal('${c.id}','${c.type} — ${c.loc}')">
+          <div class="cr-icon">${c.icon}</div>
+          <div class="cr-info">
+            <div class="cr-type">${c.type}</div>
+            <div class="cr-loc">📍 ${c.loc}</div>
+            <div class="cr-meta">
+              <span class="badge ${c.statusClass}">${c.status}</span>
+              <span class="badge ${c.sevClass}">Sev ${c.sev}/5</span>
+              <span class="cr-upvotes">👍 ${c.upvotes}</span>
+            </div>
+          </div>
+          <div class="cr-right">
+            <div class="cr-id">${c.id}</div>
+            <div class="cr-date">${c.date}</div>
+            <div style="margin-top:.3rem;">
+              ${!c.assigned
+                ? `<span style="font-size:.68rem;color:var(--red);font-weight:500;">⚠️ Unassigned</span>`
+                : `<span style="font-size:.68rem;color:var(--green);">✓ Assigned</span>`}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function cfFilter(filter, btn) {
+      document.querySelectorAll('.cf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderComplaints(filter);
+    }
+
+    function openModal(id, title) {
+      selectedComplaint = id;
+      document.getElementById('modalComplaintTitle').textContent = title;
+      document.getElementById('modalComplaintId').textContent = id;
+      document.getElementById('modalOverlay').classList.add('visible');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('visible');
+    }
+
+    function assignComplaint() {
+      closeModal();
+      alert('✅ Complaint ' + selectedComplaint + ' assigned!\n\nField team notified via SMS and app.\nCitizen notified: "Your complaint has been assigned to a field team."');
+      renderComplaints('all');
+    }
+
+    // Chart
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const received = [5,8,4,12,7,3,8];
+    const resolved = [3,6,4,8,5,2,5];
+    const maxVal = Math.max(...received);
+
+    document.getElementById('chartBars').innerHTML = days.map((d,i) => `
+      <div class="chart-bar-wrap">
+        <div class="chart-val">${received[i]}</div>
+        <div style="display:flex;gap:2px;align-items:flex-end;height:80px;">
+          <div class="chart-bar" style="background:var(--red);opacity:.7;height:${received[i]/maxVal*80}px;width:10px;"></div>
+          <div class="chart-bar" style="background:var(--green);height:${resolved[i]/maxVal*80}px;width:10px;"></div>
+        </div>
+        <div class="chart-label">${d}</div>
+      </div>
+    `).join('');
+
+    renderComplaints('all');
+
+    // Close modal on overlay click
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modalOverlay')) closeModal();
+    });
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadWatch — Roads Deserve Better</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy:#07111F; --navy2:#0D1E35; --navy3:#112240;
+      --green:#00E87A; --green2:#00C868;
+      --white:#F0F4FF; --muted:#8899BB;
+      --card:rgba(255,255,255,0.04); --border:rgba(255,255,255,0.07);
+    }
+    html{scroll-behavior:smooth;}
+    body{background:var(--navy);color:var(--white);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.025;pointer-events:none;z-index:0;}
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.4rem 5vw;background:rgba(7,17,31,0.7);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-.03em;color:var(--white);text-decoration:none;}
+    .logo span{color:var(--green);}
+    .nav-links{display:flex;gap:2rem;list-style:none;}
+    .nav-links a{color:var(--muted);text-decoration:none;font-size:.9rem;font-weight:400;letter-spacing:.02em;transition:color .2s;}
+    .nav-links a:hover{color:var(--white);}
+    .nav-cta{background:var(--green);color:var(--navy)!important;padding:.5rem 1.2rem;border-radius:100px;font-weight:500!important;transition:background .2s,transform .2s!important;}
+    .nav-cta:hover{background:var(--green2)!important;transform:translateY(-1px);color:var(--navy)!important;}
+    .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8rem 5vw 5rem;overflow:hidden;}
+    .orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;opacity:.18;animation:drift 12s ease-in-out infinite alternate;}
+    .orb-1{width:600px;height:600px;background:var(--green);top:-150px;left:-100px;}
+    .orb-2{width:500px;height:500px;background:#0055FF;bottom:-100px;right:-80px;animation-delay:-6s;}
+    .orb-3{width:300px;height:300px;background:var(--green);top:50%;left:55%;opacity:.08;animation-delay:-3s;}
+    @keyframes drift{from{transform:translate(0,0) scale(1);}to{transform:translate(30px,20px) scale(1.08);}}
+    .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;}
+    .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,232,122,.1);border:1px solid rgba(0,232,122,.25);color:var(--green);padding:.35rem 1rem;border-radius:100px;font-size:.78rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2rem;position:relative;z-index:1;animation:fadeUp .8s ease both;}
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite;}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.4);}}
+    h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.8rem,7vw,6rem);line-height:1.0;letter-spacing:-.04em;position:relative;z-index:1;animation:fadeUp .8s .15s ease both;max-width:900px;}
+    h1 em{font-style:normal;color:var(--green);position:relative;}
+    h1 em::after{content:'';position:absolute;bottom:4px;left:0;right:0;height:3px;background:var(--green);opacity:.35;border-radius:2px;}
+    .hero-sub{margin-top:1.8rem;font-size:clamp(1rem,2vw,1.2rem);color:var(--muted);max-width:560px;line-height:1.7;position:relative;z-index:1;animation:fadeUp .8s .3s ease both;}
+    .hero-actions{margin-top:2.8rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;animation:fadeUp .8s .45s ease both;}
+    .btn-primary{background:var(--green);color:var(--navy);border:none;padding:.9rem 2rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:500;cursor:pointer;text-decoration:none;transition:all .25s;display:inline-flex;align-items:center;gap:.5rem;}
+    .btn-primary:hover{background:var(--green2);transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,232,122,.25);}
+    .btn-secondary{background:transparent;color:var(--white);border:1px solid var(--border);padding:.9rem 2rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:400;cursor:pointer;text-decoration:none;transition:all .25s;display:inline-flex;align-items:center;gap:.5rem;}
+    .btn-secondary:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.05);transform:translateY(-2px);}
+    .stats-bar{position:relative;z-index:1;margin-top:4rem;display:flex;gap:3rem;flex-wrap:wrap;justify-content:center;animation:fadeUp .8s .6s ease both;}
+    .stat{text-align:center;}
+    .stat-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:700;color:var(--white);line-height:1;}
+    .stat-num span{color:var(--green);}
+    .stat-label{font-size:.78rem;color:var(--muted);margin-top:.3rem;letter-spacing:.04em;text-transform:uppercase;}
+    section{position:relative;z-index:1;padding:6rem 5vw;}
+    .section-tag{font-size:.75rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:1rem;}
+    .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:clamp(1.8rem,4vw,2.8rem);letter-spacing:-.03em;line-height:1.1;max-width:600px;}
+    .section-sub{color:var(--muted);margin-top:1rem;max-width:500px;line-height:1.7;font-size:1rem;}
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin-top:3.5rem;}
+    .step{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem 1.8rem;position:relative;overflow:hidden;transition:transform .3s,border-color .3s;}
+    .step:hover{transform:translateY(-4px);border-color:rgba(0,232,122,.2);}
+    .step::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);opacity:0;transition:opacity .3s;}
+    .step:hover::before{opacity:1;}
+    .step-num{font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;color:rgba(0,232,122,.1);line-height:1;margin-bottom:1rem;}
+    .step-icon{font-size:1.8rem;margin-bottom:1rem;}
+    .step h3{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:600;margin-bottom:.6rem;letter-spacing:-.02em;}
+    .step p{font-size:.88rem;color:var(--muted);line-height:1.65;}
+    .features-section{background:var(--navy2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+    .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:3.5rem;}
+    .feature-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2rem;transition:all .3s;}
+    .feature-card:hover{border-color:rgba(0,232,122,.2);background:rgba(0,232,122,.03);transform:translateY(-3px);}
+    .feature-icon{width:48px;height:48px;border-radius:14px;background:rgba(0,232,122,.1);border:1px solid rgba(0,232,122,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:1.2rem;}
+    .feature-card h3{font-family:'Syne',sans-serif;font-size:1rem;font-weight:600;margin-bottom:.5rem;letter-spacing:-.02em;}
+    .feature-card p{font-size:.87rem;color:var(--muted);line-height:1.65;}
+    .feature-tag{display:inline-block;margin-top:1rem;font-size:.72rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--green);background:rgba(0,232,122,.08);padding:.2rem .7rem;border-radius:100px;}
+    .pipeline{margin-top:3.5rem;display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:1rem;}
+    .pipe-step{display:flex;flex-direction:column;align-items:center;min-width:120px;text-align:center;}
+    .pipe-dot{width:44px;height:44px;border-radius:50%;background:var(--navy3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;position:relative;z-index:1;transition:all .3s;}
+    .pipe-step:hover .pipe-dot{border-color:var(--green);background:rgba(0,232,122,.1);}
+    .pipe-step.active .pipe-dot{border-color:var(--green);background:var(--green);color:var(--navy);}
+    .pipe-label{margin-top:.7rem;font-size:.75rem;color:var(--muted);font-weight:400;line-height:1.3;}
+    .pipe-line{flex:1;height:2px;background:var(--border);min-width:30px;margin-bottom:2.2rem;}
+    .transparency{display:grid;grid-template-columns:1fr 1fr;gap:3rem;margin-top:3.5rem;align-items:center;}
+    .budget-card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:2.5rem;}
+    .road-name{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:600;margin-bottom:.3rem;}
+    .road-meta{font-size:.8rem;color:var(--muted);margin-bottom:1.8rem;}
+    .budget-row{margin-bottom:1.2rem;}
+    .budget-label{display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:.5rem;}
+    .budget-label strong{color:var(--white);font-weight:500;}
+    .budget-bar-track{height:8px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden;}
+    .budget-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--green2));transition:width 1.5s cubic-bezier(.4,0,.2,1);}
+    .budget-bar-fill.spent{background:linear-gradient(90deg,#FF6B6B,#FF4444);width:35%;}
+    .budget-bar-fill.sanctioned{width:100%;}
+    .vfm-score{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .vfm-label{font-size:.82rem;color:var(--muted);}
+    .vfm-badge{background:rgba(255,100,100,.1);border:1px solid rgba(255,100,100,.2);color:#FF6B6B;padding:.3rem .9rem;border-radius:100px;font-size:.78rem;font-weight:500;}
+    .cta-section{text-align:center;}
+    .cta-box{background:var(--navy3);border:1px solid var(--border);border-radius:28px;padding:5rem 3rem;position:relative;overflow:hidden;}
+    .cta-box::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:500px;height:300px;background:var(--green);border-radius:50%;filter:blur(100px);opacity:.07;pointer-events:none;}
+    .cta-box h2{font-family:'Syne',sans-serif;font-size:clamp(1.8rem,4vw,3rem);font-weight:800;letter-spacing:-.04em;margin-bottom:1rem;position:relative;z-index:1;}
+    .cta-box p{color:var(--muted);margin-bottom:2.5rem;font-size:1rem;position:relative;z-index:1;}
+    .cta-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;}
+    footer{border-top:1px solid var(--border);padding:2.5rem 5vw;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+    .footer-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.03em;}
+    .footer-logo span{color:var(--green);}
+    footer p{font-size:.82rem;color:var(--muted);}
+    .footer-links{display:flex;gap:1.5rem;list-style:none;}
+    .footer-links a{font-size:.82rem;color:var(--muted);text-decoration:none;transition:color .2s;}
+    .footer-links a:hover{color:var(--white);}
+    .chatbot-btn{position:fixed;bottom:2rem;right:2rem;width:58px;height:58px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 8px 32px rgba(0,232,122,.35);z-index:999;transition:all .3s;animation:float 3s ease-in-out infinite;}
+    .chatbot-btn:hover{transform:scale(1.1);box-shadow:0 12px 40px rgba(0,232,122,.5);}
+    .chatbot-tooltip{position:fixed;bottom:5.5rem;right:2rem;background:var(--navy3);border:1px solid var(--border);color:var(--white);font-size:.82rem;padding:.5rem 1rem;border-radius:100px;white-space:nowrap;z-index:998;animation:float 3s ease-in-out infinite;animation-delay:.3s;}
+    @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+    .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease;}
+    .reveal.visible{opacity:1;transform:translateY(0);}
+    @media(max-width:768px){.nav-links{display:none;}.transparency{grid-template-columns:1fr;}.pipe-line{min-width:18px;}}
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="#" class="logo">Road<span>Watch</span></a>
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#transparency">Transparency</a></li>
+      <li><a href="report.html" class="nav-cta">Report a Problem</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="hero-badge"><div class="badge-dot"></div>AI-Powered Road Safety Platform</div>
+    <h1>Roads deserve<br/><em>better.</em> So do you.</h1>
+    <p class="hero-sub">Report damage. Track accountability. Expose where public money went. RoadWatch puts the power of road safety in every citizen's hands.</p>
+    <div class="hero-actions">
+      <a href="report.html" class="btn-primary">📸 Report a Problem</a>
+      <a href="home.html" class="btn-secondary">🗺️ Explore the Map</a>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num" id="reportCount">0<span>+</span></div><div class="stat-label">Reports Filed</div></div>
+      <div class="stat"><div class="stat-num" id="resolvedCount">0<span>%</span></div><div class="stat-label">Resolution Rate</div></div>
+      <div class="stat"><div class="stat-num" id="cityCount">0<span>+</span></div><div class="stat-label">Cities Covered</div></div>
+      <div class="stat"><div class="stat-num" id="savedCount">₹0<span>Cr</span></div><div class="stat-label">Accountability Tracked</div></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="section-tag">How It Works</div>
+    <h2 class="section-title">From photo to fixed — in days, not years.</h2>
+    <p class="section-sub">A streamlined process that actually delivers results, not just receipts.</p>
+    <div class="steps">
+      <div class="step reveal"><div class="step-num">01</div><div class="step-icon">📸</div><h3>Snap &amp; Report</h3><p>Take a photo of any road damage. Our AI instantly identifies the type and severity — no forms to fill.</p></div>
+      <div class="step reveal"><div class="step-num">02</div><div class="step-icon">🤖</div><h3>AI Analyses</h3><p>Computer vision classifies the damage. GPS tags the location. The right authority is identified automatically.</p></div>
+      <div class="step reveal"><div class="step-num">03</div><div class="step-icon">📬</div><h3>Routed &amp; Tracked</h3><p>Complaint reaches the correct Executive Engineer. You track every status change in real time.</p></div>
+      <div class="step reveal"><div class="step-num">04</div><div class="step-icon">✅</div><h3>Verified Fixed</h3><p>When fixed, ANY nearby user verifies with a fresh photo — not just the reporter. 3 community confirmations = officially resolved. No faking it.</p></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="section-tag reveal">Complaint Pipeline</div>
+    <h2 class="section-title reveal">Full visibility, every step.</h2>
+    <div class="pipeline reveal">
+      <div class="pipe-step active"><div class="pipe-dot">📝</div><div class="pipe-label">Filed</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">🔍</div><div class="pipe-label">Authority<br/>Identified</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">📬</div><div class="pipe-label">Complaint<br/>Sent</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">👁️</div><div class="pipe-label">Acknowledged</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">🔧</div><div class="pipe-label">In Progress</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">🛠️</div><div class="pipe-label">Fixed</div></div>
+      <div class="pipe-line"></div>
+      <div class="pipe-step"><div class="pipe-dot">✅</div><div class="pipe-label">Community<br/>Verified ×3</div></div>
+    </div>
+  </section>
+
+  <section id="features" class="features-section">
+    <div class="section-tag reveal">Features</div>
+    <h2 class="section-title reveal">Everything accountability needs.</h2>
+    <p class="section-sub reveal">Built for citizens. Designed to make authorities answerable.</p>
+    <div class="features-grid">
+      <div class="feature-card reveal"><div class="feature-icon">🤖</div><h3>AI Damage Detection</h3><p>YOLOv8 computer vision automatically classifies potholes, cracks, broken dividers, faded markings from a single photo.</p><span class="feature-tag">Computer Vision</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">🗺️</div><h3>Live Damage Heatmap</h3><p>Every report appears instantly on a live public map. Filter by severity, type, or status. See your city's real road condition.</p><span class="feature-tag">Real-Time</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">📬</div><h3>Smart Authority Routing</h3><p>GPS coordinates automatically identify whether a road is NH, SH, MDR, or Municipal — routing complaints to the correct Executive Engineer.</p><span class="feature-tag">Auto-Routing</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">💰</div><h3>Budget Transparency</h3><p>See exactly how much was sanctioned vs spent on any road. Contractor name, last relaying date, and data source all visible.</p><span class="feature-tag">Watchdog</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">💬</div><h3>RoadBot — AI Assistant</h3><p>Ask anything. "Who is responsible for this road?" "How much was spent on NH-44?" Responds in English, Hindi, Tamil, Telugu.</p><span class="feature-tag">Claude AI</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">📶</div><h3>Works Offline</h3><p>No internet? No problem. Capture and queue reports offline. Everything auto-syncs when you're back online.</p><span class="feature-tag">Offline-First</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">🌍</div><h3>Global Ready</h3><p>Built on OpenStreetMap. Works in any country. The same system monitoring Coimbatore can monitor London or Nairobi.</p><span class="feature-tag">International</span></div>
+      <div class="feature-card reveal"><div class="feature-icon">🏆</div><h3>Community Gamification</h3><p>Earn Road Guardian points for every verified report. City leaderboards. Badges. Because doing good should feel good.</p><span class="feature-tag">Engagement</span></div>
+    </div>
+  </section>
+
+  <section id="transparency">
+    <div class="section-tag reveal">Budget Watchdog</div>
+    <h2 class="section-title reveal">Your tax money — finally visible.</h2>
+    <p class="section-sub reveal">See the gap between what was promised and what was delivered, on every road.</p>
+    <div class="transparency">
+      <div>
+        <p style="color:var(--muted);line-height:1.8;font-size:.95rem;" class="reveal">Citizens pay taxes. Governments allocate budgets. Contractors get paid. But roads stay broken. RoadWatch's Budget Watchdog layer maps every road project's sanctioned amount against actual spending — overlaid directly on the damage map.</p>
+        <br/>
+        <p style="color:var(--muted);line-height:1.8;font-size:.95rem;" class="reveal">When you see a red cluster of potholes sitting on top of a <strong style="color:var(--white);">₹2.3 crore "repaired" road</strong> in Coimbatore, you'll know exactly who is accountable.</p>
+        <br/>
+        <a href="#" class="btn-primary reveal" style="margin-top:.5rem;display:inline-flex;">🔍 Check Your Road</a>
+      </div>
+      <div class="budget-card reveal">
+        <div class="road-name">Avinashi Road — NH-544</div>
+        <div class="road-meta">Coimbatore · NHAI · Contractor: Sri Murugan Infra Pvt. Ltd.</div>
+        <div class="budget-row">
+          <div class="budget-label"><span>Amount Sanctioned</span><strong>₹2.30 Cr</strong></div>
+          <div class="budget-bar-track"><div class="budget-bar-fill sanctioned"></div></div>
+        </div>
+        <div class="budget-row">
+          <div class="budget-label"><span>Amount Spent</span><strong style="color:#FF6B6B;">₹0.80 Cr</strong></div>
+          <div class="budget-bar-track"><div class="budget-bar-fill spent"></div></div>
+        </div>
+        <div class="budget-row" style="margin-top:1rem;">
+          <div class="budget-label"><span>Active Reports on This Road</span><strong style="color:#FF6B6B;">34 🔴</strong></div>
+        </div>
+        <div class="vfm-score">
+          <span class="vfm-label">Value for Money Score</span>
+          <span class="vfm-badge">Poor — 2.1 / 10</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="cta-box reveal">
+      <h2>Every pothole has a story.<br/>Start telling yours.</h2>
+      <p>Join citizens across Coimbatore and beyond holding roads — and authorities — to account.</p>
+      <div class="cta-actions">
+        <a href="report.html" class="btn-primary">📸 Report Now — It's Free</a>
+        <a href="home.html" class="btn-secondary">🗺️ View Live Map</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-logo">Road<span>Watch</span></div>
+    <p>Built for IIT Madras Road Safety Hackathon 2026 · CoERS</p>
+    <ul class="footer-links">
+      <li><a href="#">About</a></li>
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </footer>
+
+  <div class="chatbot-tooltip">Ask RoadBot anything 💬</div>
+  <button class="chatbot-btn" onclick="alert('RoadBot coming soon! 🤖')">🤖</button>
+
+  <script>
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    reveals.forEach(r => observer.observe(r));
+
+    function animateCount(id, target, prefix, suffix) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let current = 0;
+      const step = target / 60;
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) { current = target; clearInterval(timer); }
+        el.innerHTML = prefix + Math.floor(current) + '<span>' + suffix + '</span>';
+      }, 25);
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        animateCount('reportCount', 1247, '', '+');
+        animateCount('resolvedCount', 68, '', '%');
+        animateCount('cityCount', 12, '', '+');
+        animateCount('savedCount', 23, '₹', 'Cr');
+      }, 600);
+    });
+  </script>
+  <script src="connect.js"></script>
+</body>
+</html>
