@@ -485,79 +485,30 @@ def dashboard_stats():
 # ── BUDGET DATA ───────────────────────────────────────────────
 @app.route("/api/budget-data", methods=["GET"])
 def budget_data():
-    """Returns government budget transparency data"""
-    roads = [
-        {
-            "name":        "Avinashi Road — NH-544",
-            "type":        "National Highway",
-            "dept":        "NHAI",
-            "contractor":  "Sri Murugan Infra Pvt. Ltd.",
-            "relay_date":  "January 2022",
-            "sanctioned":  8.5,
-            "spent":       3.2,
-            "reports":     34,
-            "vfm_score":   2.1,
-            "source":      "nhai.gov.in"
-        },
-        {
-            "name":        "Trichy Road — NH-83",
-            "type":        "National Highway",
-            "dept":        "NHAI",
-            "contractor":  "Larsen & Toubro Infra",
-            "relay_date":  "November 2021",
-            "sanctioned":  12.3,
-            "spent":       4.8,
-            "reports":     47,
-            "vfm_score":   1.8,
-            "source":      "nhai.gov.in"
-        },
-        {
-            "name":        "DB Road — RS Puram",
-            "type":        "Municipal Road",
-            "dept":        "CCMC",
-            "contractor":  "City Infra Solutions Pvt. Ltd.",
-            "relay_date":  "August 2023",
-            "sanctioned":  1.4,
-            "spent":       0.9,
-            "reports":     31,
-            "vfm_score":   3.1,
-            "source":      "ccmc.gov.in"
-        },
-        {
-            "name":        "Race Course Road",
-            "type":        "Municipal Road",
-            "dept":        "CCMC",
-            "contractor":  "Raj Road Constructions",
-            "relay_date":  "March 2023",
-            "sanctioned":  1.2,
-            "spent":       1.1,
-            "reports":     12,
-            "vfm_score":   7.8,
-            "source":      "ccmc.gov.in"
-        },
-        {
-            "name":        "Sathy Road — SH-20",
-            "type":        "State Highway",
-            "dept":        "PWD TN",
-            "contractor":  "Kumar Constructions Pvt. Ltd.",
-            "relay_date":  "June 2022",
-            "sanctioned":  4.8,
-            "spent":       2.1,
-            "reports":     38,
-            "vfm_score":   2.4,
-            "source":      "tnpwd.gov.in"
-        },
-    ]
+    """Returns government budget transparency data from Supabase"""
+    try:
+        if supabase:
+            result = supabase.table("roads").select("*").execute()
+            roads = result.data
+            
+            total_sanctioned = sum(r["sanctioned_cr"] for r in roads)
+            total_spent = sum(r["spent_cr"] for r in roads)
+            total_gap = round(total_sanctioned - total_spent, 1)
+            total_reports = sum(r["active_reports"] for r in roads)
 
-    return jsonify({
-        "success":             True,
-        "total_sanctioned":    47.3,
-        "total_spent":         18.9,
-        "total_gap":           28.4,
-        "active_reports":      209,
-        "roads":               roads
-    })
+            return jsonify({
+                "success": True,
+                "total_sanctioned": round(total_sanctioned, 1),
+                "total_spent": round(total_spent, 1),
+                "total_gap": total_gap,
+                "active_reports": total_reports,
+                "roads": roads
+            })
+        else:
+            return jsonify({"success": False, "error": "Database not connected"}), 503
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ── RUN SERVER ───────────────────────────────────────────────
 if __name__ == "__main__":
