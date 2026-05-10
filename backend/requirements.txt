@@ -1,0 +1,8 @@
+flask
+flask-cors
+supabase
+anthropic
+pillow
+requests
+python-dotenv
+cloudinary
