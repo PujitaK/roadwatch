@@ -3,7 +3,7 @@
 // This file connects all HTML pages to the Flask backend
 // ============================================================
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://roadwatch-backend-1d33.onrender.com";
 
 // ============================================================
 // 1. AI DAMAGE ANALYSIS
