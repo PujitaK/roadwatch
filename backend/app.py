@@ -18,7 +18,7 @@ load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Allow frontend to talk to backend
+CORS(app, origins=["*"])  # Allow frontend to talk to backend
 
 # ── API CLIENTS ──────────────────────────────────────────────
 anthropic_client = anthropic.Anthropic(
