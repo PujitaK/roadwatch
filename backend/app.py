@@ -561,9 +561,9 @@ def budget_data():
 
 # ── RUN SERVER ───────────────────────────────────────────────
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
     print("\n🚦 RoadWatch Backend Starting...")
-    print("📍 Running on http://localhost:5000")
+    print(f"📍 Running on port {port}")
     print("🤖 RoadBot powered by Claude AI")
-    print("📊 Supabase database connected")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-    app.run(host="0.0.0.0", port=10000, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=False)
