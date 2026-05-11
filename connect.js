@@ -116,31 +116,41 @@ let chatHistory = [];
 
 async function sendToRoadBot(userMessage) {
     try {
+        // First wake up the server
+        await fetch(`${API_BASE}/`).catch(() => {});
+        
+        // Wait 2 seconds for server to wake up
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
         const response = await fetch(`${API_BASE}/api/roadbot`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             body: JSON.stringify({
                 message: userMessage,
                 history: chatHistory
             })
         });
+
+        if (!response.ok) throw new Error('Server error');
+        
         const data = await response.json();
 
         if (data.reply) {
-            // Add to history for context
-            chatHistory.push({ role: "user",      content: userMessage });
+            chatHistory.push({ role: "user", content: userMessage });
             chatHistory.push({ role: "assistant", content: data.reply });
-            // Keep history to last 10 messages
             if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
         }
 
-        return data.reply || "Sorry, I couldn't process that. Please try again!";
+        return data.reply || "Sorry I could not process that. Please try again!";
+
     } catch (error) {
         console.error("RoadBot error:", error);
-        return "RoadBot is offline right now. Please make sure the server is running!";
+        return "RoadBot is waking up! Please wait 30 seconds and try again. The server needs a moment to start! ⏳";
     }
 }
-
 // ============================================================
 // 8. ROADBOT UI
 // Floating chatbot widget that works on ALL pages
@@ -336,7 +346,7 @@ async function sendBotMessage() {
 
     input.value = "";
     addMessage(msg, "user");
-    addMessage("...", "bot", "typing");
+    addMessage("⏳ Thinking... (may take 30 seconds if server just woke up)", "bot", "typing");
 
     const reply = await sendToRoadBot(msg);
 
