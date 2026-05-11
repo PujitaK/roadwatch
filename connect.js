@@ -386,6 +386,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Start RoadBot
     initRoadBot();
+    // Keep Render backend alive — pings every 5 minutes
+setInterval(() => {
+    fetch(`${API_BASE}/`)
+        .catch(() => {});
+}, 300000);
 
     console.log("✅ RoadWatch connected to backend at", API_BASE);
 });
