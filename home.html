@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -349,12 +350,89 @@
 
     function closeDetail() { document.getElementById('detailPanel').classList.remove('visible'); }
 
-    function setView(mode) {
-      document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
-      if (mode === 'heat') alert('🔥 Heatmap mode — damage density visualized as heat overlay!');
-      else if (mode === 'budget') alert('💰 Budget Overlay — govt spending vs damage density per road!');
-    }
+    let heatLayer = null;
+let budgetMarkers = [];
+
+function setView(mode) {
+  document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+
+  // Remove existing heat layer
+  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+
+  // Remove budget markers
+  budgetMarkers.forEach(m => map.removeLayer(m));
+  budgetMarkers = [];
+
+  // Show/hide normal markers
+  Object.values(markers).forEach(m => {
+    if (mode === 'all') { m.addTo(map); }
+    else { map.removeLayer(m); }
+  });
+
+  if (mode === 'heat') {
+    // Build heatmap from report locations
+    const heatData = reports.map(r => {
+      const intensity = r.severity / 5;
+      return [r.lat, r.lng, intensity];
+    });
+
+    heatLayer = L.heatLayer(heatData, {
+      radius: 35,
+      blur: 25,
+      maxZoom: 17,
+      gradient: {
+        0.0: '#00E87A',
+        0.3: '#FFD32A',
+        0.6: '#FFA502',
+        1.0: '#FF4757'
+      }
+    }).addTo(map);
+
+  } else if (mode === 'budget') {
+    // Budget overlay — show road spending circles
+    const budgetData = [
+      { lat:11.0168, lng:77.0027, name:'Avinashi Road NH-544', sanctioned:8.5, spent:3.2, reports:34 },
+      { lat:11.0018, lng:77.0200, name:'Trichy Road NH-83', sanctioned:12.3, spent:4.8, reports:47 },
+      { lat:11.0132, lng:76.9570, name:'DB Road RS Puram', sanctioned:1.4, spent:0.9, reports:31 },
+      { lat:11.0094, lng:76.9631, name:'Race Course Road', sanctioned:1.2, spent:1.1, reports:12 },
+      { lat:11.0470, lng:76.9990, name:'Sathy Road SH-20', sanctioned:4.8, spent:2.1, reports:38 },
+      { lat:10.9960, lng:76.9760, name:'Ukkadam Bypass', sanctioned:3.2, spent:3.2, reports:67 },
+      { lat:11.0780, lng:76.9690, name:'Mettupalayam Road', sanctioned:3.6, spent:2.1, reports:22 },
+      { lat:10.9850, lng:77.0150, name:'Palladam Road', sanctioned:1.8, spent:1.8, reports:43 },
+    ];
+
+    budgetData.forEach(road => {
+      const gap = road.sanctioned - road.spent;
+      const vfm = ((road.spent / road.sanctioned) * 10 / (road.reports / 10)).toFixed(1);
+      const color = road.reports > 40 ? '#FF4757' : road.reports > 20 ? '#FFA502' : '#00E87A';
+      const radius = road.reports * 8;
+
+      const circle = L.circle([road.lat, road.lng], {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.15,
+        weight: 2,
+        radius: radius
+      }).addTo(map);
+
+      circle.bindPopup(`
+        <div style="font-family:'DM Sans',sans-serif;min-width:200px;">
+          <strong style="font-size:.9rem;">${road.name}</strong><br/>
+          <hr style="border-color:#eee;margin:.4rem 0;"/>
+          💰 Sanctioned: <strong>₹${road.sanctioned}Cr</strong><br/>
+          📤 Spent: <strong>₹${road.spent}Cr</strong><br/>
+          ⚠️ Gap: <strong style="color:#FF4757;">₹${gap.toFixed(1)}Cr</strong><br/>
+          📍 Active Reports: <strong style="color:#FF4757;">${road.reports}</strong>
+        </div>
+      `);
+
+      budgetMarkers.push(circle);
+    });
+
+    map.setView([11.0168, 76.9558], 12);
+  }
+}
 
     function upvoteReport() { alert('👍 Upvoted! This complaint gets higher priority.'); }
     function shareReport() {
