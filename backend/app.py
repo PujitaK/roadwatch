@@ -411,7 +411,7 @@ def roadbot():
 
         # ── Call Claude API ──
         response = anthropic_client.messages.create(
-            model="claude-opus-4-5",
+            model="claude-haiku-4-5-20251001",
             max_tokens=400,
             system="""You are RoadBot, the AI assistant for RoadWatch — an Indian road safety and accountability platform focused on Coimbatore, Tamil Nadu.
 
