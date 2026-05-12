@@ -1,5 +1,5 @@
 # ============================================================
-# ROADWATCH — Main Flask Backend Server
+# ROADWATCH — Main Flask Backend Server (FIXED)
 # ============================================================
 
 from flask import Flask, request, jsonify
@@ -7,28 +7,21 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import anthropic
-import base64
 import json
 import random
 import string
 from datetime import datetime
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Initialize Flask app
 app = Flask(__name__)
-from flask_cors import CORS
 
-CORS(app, resources={
-    r"/api/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# ── CORS — set up ONCE, correctly ────────────────────────────
+# This is the ONLY cors setup. Removed the duplicate @after_request
+# and the conflicting CORS(app, resources={...}) from before.
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ── API CLIENTS ──────────────────────────────────────────────
+# ── ANTHROPIC CLIENT ─────────────────────────────────────────
 anthropic_client = anthropic.Anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY")
 )
@@ -89,46 +82,33 @@ AUTHORITY_MAP = {
         "response_days": 12
     }
 }
-# ── CORS FIX ─────────────────────────────────────────────────
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
 
-# ── DAMAGE TYPES FOR AI SIMULATION ──────────────────────────
-
-# ── DAMAGE TYPES FOR AI SIMULATION ──────────────────────────
 DAMAGE_TYPES = [
-    {"type": "Pothole", "icon": "🕳️"},
-    {"type": "Road Crack", "icon": "🪨"},
-    {"type": "Broken Divider", "icon": "🚧"},
-    {"type": "Faded Markings", "icon": "🎨"},
-    {"type": "Waterlogging", "icon": "💧"},
-    {"type": "Missing Signboard", "icon": "🪧"},
-    {"type": "Broken Street Light", "icon": "💡"},
+    {"type": "Pothole"},
+    {"type": "Road Crack"},
+    {"type": "Broken Divider"},
+    {"type": "Faded Markings"},
+    {"type": "Waterlogging"},
+    {"type": "Missing Signboard"},
+    {"type": "Broken Street Light"},
 ]
 
 # ============================================================
-# HELPER FUNCTIONS
+# HELPERS
 # ============================================================
 
 def generate_tracking_id():
-    """Generate a unique tracking ID like RW-CBE-2026-1234"""
     year = datetime.now().year
     number = ''.join(random.choices(string.digits, k=4))
     return f"RW-CBE-{year}-{number}"
 
 def get_authority(road_type):
-    """Get authority info based on road type"""
     return AUTHORITY_MAP.get(road_type, AUTHORITY_MAP["municipal"])
 
 # ============================================================
 # ROUTES
 # ============================================================
 
-# ── HOME ─────────────────────────────────────────────────────
 @app.route("/")
 def home():
     return jsonify({
@@ -136,6 +116,7 @@ def home():
         "version": "1.0.0",
         "status": "active",
         "endpoints": [
+            "GET  /api/health",
             "POST /api/analyse-damage",
             "POST /api/submit-report",
             "GET  /api/reports",
@@ -146,26 +127,32 @@ def home():
         ]
     })
 
+# ── HEALTH CHECK ─────────────────────────────────────────────
+@app.route("/api/health", methods=["GET"])
+def health():
+    return jsonify({
+        "status": "ok",
+        "message": "RoadWatch backend is live",
+        "supabase": supabase is not None
+    })
+
 # ── AI DAMAGE ANALYSIS ───────────────────────────────────────
-@app.route("/api/analyse-damage", methods=["POST"])
+# Added OPTIONS to handle browser preflight requests
+@app.route("/api/analyse-damage", methods=["POST", "OPTIONS"])
 def analyse_damage():
-    """
-    Receives a base64 image from frontend.
-    Uses Claude Vision to detect road damage type and severity.
-    Returns structured analysis.
-    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     try:
         data = request.get_json()
-        image_data = data.get("image")  # base64 string
-        
+        image_data = data.get("image")
+
         if not image_data:
             return jsonify({"error": "No image provided"}), 400
 
-        # Remove data URL prefix if present
         if "," in image_data:
             image_data = image_data.split(",")[1]
 
-        # ── Call Claude Vision API ──
         message = anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=500,
@@ -185,17 +172,17 @@ def analyse_damage():
                             "type": "text",
                             "text": """You are a road damage detection AI for RoadWatch, an Indian road safety platform.
 
-Analyse this image and respond ONLY with a JSON object (no other text) in this exact format:
+Analyse this image and respond ONLY with raw JSON (no markdown, no backticks, no extra text):
 {
   "damage_detected": true or false,
   "damage_type": "Pothole" or "Road Crack" or "Broken Divider" or "Faded Markings" or "Waterlogging" or "Missing Signboard" or "Broken Street Light" or "Other",
-  "severity": 1 to 5 (1=minimal, 5=critical),
+  "severity": 1 to 5,
   "severity_label": "Minimal" or "Low" or "Moderate" or "High" or "Critical",
   "surface_type": "Asphalt" or "Concrete" or "Gravel" or "Unknown",
-  "estimated_size": brief size description like "~60cm wide" or "~2m stretch",
-  "confidence": confidence percentage as number like 94.2,
-  "description": one sentence describing the damage,
-  "urgent": true if severity >= 4 else false
+  "estimated_size": "~60cm wide",
+  "confidence": 94.2,
+  "description": "one sentence describing the damage",
+  "urgent": true or false
 }
 
 If no road damage is visible, set damage_detected to false and severity to 0."""
@@ -205,25 +192,24 @@ If no road damage is visible, set damage_detected to false and severity to 0."""
             ],
         )
 
-        # Parse Claude's response
         response_text = message.content[0].text.strip()
-        
-        # Clean JSON if needed
+
+        # Strip markdown fences if Claude adds them
         if "```" in response_text:
-            response_text = response_text.split("```")[1]
-            if response_text.startswith("json"):
-                response_text = response_text[4:]
+            for part in response_text.split("```"):
+                part = part.strip().lstrip("json").strip()
+                try:
+                    analysis = json.loads(part)
+                    analysis["tracking_id"] = generate_tracking_id()
+                    return jsonify({"success": True, "analysis": analysis})
+                except:
+                    continue
 
         analysis = json.loads(response_text)
         analysis["tracking_id"] = generate_tracking_id()
-        
-        return jsonify({
-            "success": True,
-            "analysis": analysis
-        })
+        return jsonify({"success": True, "analysis": analysis})
 
     except json.JSONDecodeError:
-        # Fallback if Claude doesn't return clean JSON
         fallback = random.choice(DAMAGE_TYPES)
         sev = random.randint(3, 5)
         return jsonify({
@@ -237,7 +223,8 @@ If no road damage is visible, set damage_detected to false and severity to 0."""
                 "estimated_size": "~60cm wide",
                 "confidence": round(random.uniform(85, 97), 1),
                 "description": f"{fallback['type']} detected on road surface",
-                "urgent": sev >= 4
+                "urgent": sev >= 4,
+                "tracking_id": generate_tracking_id()
             }
         })
 
@@ -246,53 +233,49 @@ If no road damage is visible, set damage_detected to false and severity to 0."""
 
 
 # ── SUBMIT REPORT ─────────────────────────────────────────────
-@app.route("/api/submit-report", methods=["POST"])
+# Added OPTIONS to handle browser preflight requests
+@app.route("/api/submit-report", methods=["POST", "OPTIONS"])
 def submit_report():
-    """
-    Receives complete report from frontend.
-    Saves to Supabase database.
-    Uploads photo to Cloudinary.
-    Returns tracking ID.
-    """
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     try:
         data = request.get_json()
-
         tracking_id = generate_tracking_id()
         road_type   = data.get("road_type", "municipal")
         authority   = get_authority(road_type)
 
         report = {
-            "tracking_id":  tracking_id,
-            "damage_type":  data.get("damage_type", "Pothole"),
-            "severity":     int(data.get("severity", 3)),
-            "location":     data.get("location", ""),
-            "gps_lat":      data.get("gps_lat"),
-            "gps_lng":      data.get("gps_lng"),
-            "road_type":    road_type,
-            "authority":    authority["name"],
-            "authority_ee": authority["ee"],
-            "notes":        data.get("notes", ""),
-            "reporter_name":data.get("reporter_name", "Anonymous"),
-            "status":       "Filed",
-            "status_code":  1,
-            "upvotes":      0,
-            "created_at":   datetime.utcnow().isoformat(),
+            "tracking_id":   tracking_id,
+            "damage_type":   data.get("damage_type", "Pothole"),
+            "severity":      int(data.get("severity", 3)),
+            "location":      data.get("location", ""),
+            "gps_lat":       data.get("gps_lat"),
+            "gps_lng":       data.get("gps_lng"),
+            "road_type":     road_type,
+            "authority":     authority["name"],
+            "authority_ee":  authority["ee"],
+            "notes":         data.get("notes", ""),
+            "reporter_name": data.get("reporter_name", "Anonymous"),
+            "status":        "Filed",
+            "status_code":   1,
+            "upvotes":       0,
+            "created_at":    datetime.utcnow().isoformat(),
         }
 
-        # ── Save to Supabase ──
         if supabase:
-            result = supabase.table("reports").insert(report).execute()
+            supabase.table("reports").insert(report).execute()
             print(f"✅ Report saved: {tracking_id}")
         else:
-            print(f"⚠️  Supabase offline — report not saved to DB: {tracking_id}")
+            print(f"⚠️  Supabase offline — report not saved: {tracking_id}")
 
         return jsonify({
-            "success":      True,
-            "tracking_id":  tracking_id,
-            "authority":    authority["name"],
-            "authority_ee": authority["ee"],
-            "response_days":authority["response_days"],
-            "message":      f"Report filed! Sent to {authority['short']}. Expected response in {authority['response_days']} working days."
+            "success":       True,
+            "tracking_id":   tracking_id,
+            "authority":     authority["name"],
+            "authority_ee":  authority["ee"],
+            "response_days": authority["response_days"],
+            "message":       f"Report filed! Sent to {authority['short']}. Expected response in {authority['response_days']} working days."
         })
 
     except Exception as e:
@@ -302,10 +285,6 @@ def submit_report():
 # ── GET ALL REPORTS ───────────────────────────────────────────
 @app.route("/api/reports", methods=["GET"])
 def get_reports():
-    """
-    Returns all reports from Supabase.
-    Used by the live map page.
-    """
     try:
         if supabase:
             result = supabase.table("reports") \
@@ -319,12 +298,11 @@ def get_reports():
                 "count":   len(result.data)
             })
         else:
-            # Return demo data if Supabase not connected
             return jsonify({
                 "success": True,
                 "reports": [],
                 "count":   0,
-                "note":    "Supabase not connected — showing demo data"
+                "note":    "Supabase not connected"
             })
 
     except Exception as e:
@@ -334,14 +312,12 @@ def get_reports():
 # ── GET SINGLE REPORT ─────────────────────────────────────────
 @app.route("/api/reports/<tracking_id>", methods=["GET"])
 def get_report(tracking_id):
-    """Returns a single report by tracking ID"""
     try:
         if supabase:
             result = supabase.table("reports") \
                 .select("*") \
                 .eq("tracking_id", tracking_id) \
                 .execute()
-
             if result.data:
                 return jsonify({"success": True, "report": result.data[0]})
             else:
@@ -354,17 +330,17 @@ def get_report(tracking_id):
 
 
 # ── UPVOTE REPORT ─────────────────────────────────────────────
-@app.route("/api/reports/<tracking_id>/upvote", methods=["POST"])
+# Added OPTIONS to handle browser preflight requests
+@app.route("/api/reports/<tracking_id>/upvote", methods=["POST", "OPTIONS"])
 def upvote_report(tracking_id):
-    """Increments upvote count for a report"""
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     try:
         if supabase:
-            # Get current upvotes
             result = supabase.table("reports") \
                 .select("upvotes") \
                 .eq("tracking_id", tracking_id) \
                 .execute()
-
             if result.data:
                 current = result.data[0]["upvotes"] or 0
                 supabase.table("reports") \
@@ -372,7 +348,6 @@ def upvote_report(tracking_id):
                     .eq("tracking_id", tracking_id) \
                     .execute()
                 return jsonify({"success": True, "upvotes": current + 1})
-
         return jsonify({"success": True, "upvotes": 1})
 
     except Exception as e:
@@ -380,36 +355,40 @@ def upvote_report(tracking_id):
 
 
 # ── ROADBOT — AI CHATBOT ──────────────────────────────────────
-@app.route("/api/roadbot", methods=["POST"])
+# THIS IS THE MAIN FIX — added OPTIONS so browser preflight works
+@app.route("/api/roadbot", methods=["POST", "OPTIONS"])
 def roadbot():
-    """
-    Powers the RoadBot AI assistant using Claude API.
-    Answers questions about road safety, budgets,
-    complaints, and guides users through reporting.
-    Supports English, Hindi, Tamil, Telugu.
-    """
+    # Browser sends OPTIONS first before POST — must return 200
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+
     try:
         data = request.get_json()
-        user_message  = data.get("message", "")
-        history       = data.get("history", [])  # Previous messages
-        language      = data.get("language", "English")
 
-        if not user_message:
+        # Safety check — handle if body is None
+        if not data:
+            return jsonify({"error": "No data received"}), 400
+
+        user_message = data.get("message", "")
+        history      = data.get("history", [])
+        language     = data.get("language", "English")
+
+        if not user_message.strip():
             return jsonify({"error": "No message provided"}), 400
 
-        # Build conversation history for Claude
+        # Build message history for Claude
         messages = []
-        for h in history[-6:]:  # Last 6 messages for context
+        for h in history[-6:]:
             messages.append({
-                "role": h["role"],
+                "role":    h["role"],
                 "content": h["content"]
             })
         messages.append({
-            "role": "user",
+            "role":    "user",
             "content": user_message
         })
 
-        # ── Call Claude API ──
+        # Call Claude API
         response = anthropic_client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=400,
@@ -419,14 +398,13 @@ Your role:
 - Help citizens report road damage (potholes, cracks, broken dividers, waterlogging, missing signs, broken lights)
 - Explain road budgets and government spending transparency
 - Tell users which authority is responsible for which road type:
-  * National Highways (NH) → NHAI Coimbatore Division
-  * State Highways (SH) → PWD Tamil Nadu, Coimbatore Division  
-  * Municipal Roads → Coimbatore City Municipal Corporation (CCMC)
-  * Major District Roads → TN Highways Department
+  * National Highways (NH) -> NHAI Coimbatore Division
+  * State Highways (SH) -> PWD Tamil Nadu, Coimbatore Division
+  * Municipal Roads -> Coimbatore City Municipal Corporation (CCMC)
+  * Major District Roads -> TN Highways Department
 - Guide users through the complaint tracking pipeline
 - Explain the community verification system
 - Share road safety tips
-- Answer questions about specific Coimbatore roads
 
 Key roads in Coimbatore:
 - Avinashi Road (NH-544) — NHAI responsibility
@@ -436,11 +414,11 @@ Key roads in Coimbatore:
 - Sathy Road (SH-20) — PWD responsibility
 
 Budget data for Coimbatore 2025-26:
-- Total sanctioned: ₹47.3 Crore
-- Spent so far: ₹18.9 Crore
-- Unspent gap: ₹28.4 Crore
+- Total sanctioned: Rs.47.3 Crore
+- Spent so far: Rs.18.9 Crore
+- Unspent gap: Rs.28.4 Crore
 
-Personality: Helpful, clear, concise. Use simple language. 
+Personality: Helpful, clear, concise. Use simple language.
 If user writes in Tamil, reply in Tamil. If Hindi, reply in Hindi. If Telugu, reply in Telugu.
 Keep responses under 100 words. Be direct and actionable.
 Always end with one helpful next step the user can take.""",
@@ -450,41 +428,42 @@ Always end with one helpful next step the user can take.""",
         bot_reply = response.content[0].text
 
         return jsonify({
-            "success": True,
-            "reply":   bot_reply,
+            "success":  True,
+            "reply":    bot_reply,
             "language": language
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"RoadBot error: {e}")
+        return jsonify({
+            "success": False,
+            "error":   str(e),
+            "reply":   "Sorry, I'm having trouble right now. Please try again in a moment."
+        }), 500
 
 
 # ── DASHBOARD STATS ───────────────────────────────────────────
 @app.route("/api/dashboard-stats", methods=["GET"])
 def dashboard_stats():
-    """Returns live stats for the public dashboard"""
     try:
         if supabase:
             all_reports = supabase.table("reports").select("status_code, severity").execute()
             reports     = all_reports.data
-
             total    = len(reports)
             active   = len([r for r in reports if r["status_code"] <= 2])
             progress = len([r for r in reports if 3 <= r["status_code"] <= 5])
             resolved = len([r for r in reports if r["status_code"] >= 6])
             critical = len([r for r in reports if r["severity"] >= 4])
-
             return jsonify({
-                "success":  True,
-                "total":    total,
-                "active":   active,
-                "progress": progress,
-                "resolved": resolved,
-                "critical": critical,
+                "success":         True,
+                "total":           total,
+                "active":          active,
+                "progress":        progress,
+                "resolved":        resolved,
+                "critical":        critical,
                 "resolution_rate": round(resolved / total * 100) if total > 0 else 0
             })
         else:
-            # Demo stats
             return jsonify({
                 "success":         True,
                 "total":           708,
@@ -502,24 +481,19 @@ def dashboard_stats():
 # ── BUDGET DATA ───────────────────────────────────────────────
 @app.route("/api/budget-data", methods=["GET"])
 def budget_data():
-    """Returns government budget transparency data from Supabase"""
     try:
         if supabase:
             result = supabase.table("roads").select("*").execute()
-            roads = result.data
-            
+            roads  = result.data
             total_sanctioned = sum(r["sanctioned_cr"] for r in roads)
-            total_spent = sum(r["spent_cr"] for r in roads)
-            total_gap = round(total_sanctioned - total_spent, 1)
-            total_reports = sum(r["active_reports"] for r in roads)
-
+            total_spent      = sum(r["spent_cr"] for r in roads)
             return jsonify({
-                "success": True,
+                "success":          True,
                 "total_sanctioned": round(total_sanctioned, 1),
-                "total_spent": round(total_spent, 1),
-                "total_gap": total_gap,
-                "active_reports": total_reports,
-                "roads": roads
+                "total_spent":      round(total_spent, 1),
+                "total_gap":        round(total_sanctioned - total_spent, 1),
+                "active_reports":   sum(r["active_reports"] for r in roads),
+                "roads":            roads
             })
         else:
             return jsonify({"success": False, "error": "Database not connected"}), 503
@@ -527,8 +501,13 @@ def budget_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── RUN SERVER ───────────────────────────────────────────────
+
+# ============================================================
+# RUN SERVER
+# ============================================================
 if __name__ == "__main__":
+    # Use PORT from environment (Render sets this automatically)
+    # Falls back to 10000 locally
     port = int(os.environ.get("PORT", 10000))
     print("\n🚦 RoadWatch Backend Starting...")
     print(f"📍 Running on port {port}")
