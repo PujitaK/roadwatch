@@ -100,12 +100,16 @@
     .map-search { position:absolute; top:1rem; left:1rem; z-index:700; background:rgba(13,30,53,0.92); border:1px solid var(--border); border-radius:12px; padding:.6rem 1rem; display:flex; align-items:center; gap:.6rem; backdrop-filter:blur(12px); width:260px; }
     .map-search input { background:transparent; border:none; outline:none; color:var(--white); font-family:'DM Sans',sans-serif; font-size:.85rem; width:100%; }
     .map-search input::placeholder { color:var(--muted); }
-    .legend { position:absolute; bottom:1.5rem; left:360px; z-index:700; background:rgba(13,30,53,0.92); border:1px solid var(--border); border-radius:12px; padding:.8rem 1rem; backdrop-filter:blur(12px); display:flex; gap:1rem; align-items:center; }
+    .legend { position:absolute; bottom:1.5rem; left:360px; z-index:700; background:rgba(13,30,53,0.92); border:1px solid var(--border); border-radius:12px; padding:.8rem 1rem; backdrop-filter:blur(12px); display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
     .legend-item { display:flex; align-items:center; gap:.4rem; font-size:.72rem; color:var(--muted); }
     .legend-dot { width:10px; height:10px; border-radius:50%; }
     .loading-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:900; background:rgba(13,30,53,0.9); border:1px solid var(--border); border-radius:16px; padding:1.5rem 2rem; text-align:center; }
     .loading-spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto .8rem; }
     @keyframes spin { to { transform:rotate(360deg); } }
+    /* Mode banner */
+    .mode-banner { position:absolute; top:4rem; left:50%; transform:translateX(-50%); z-index:700; background:rgba(13,30,53,0.95); border:1px solid rgba(0,232,122,.3); border-radius:100px; padding:.4rem 1.2rem; font-size:.78rem; color:var(--green); font-weight:500; display:none; white-space:nowrap; }
+    .mode-banner.visible { display:block; animation:fadeUp .3s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateX(-50%) translateY(6px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
     @media(max-width:768px){ .sidebar { display:none; } .legend { left:1rem; } }
   </style>
 </head>
@@ -146,15 +150,16 @@
     <div style="position:relative;flex:1;">
       <div id="map"></div>
 
-      <!-- Loading overlay -->
       <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
         <div style="font-size:.85rem;color:var(--muted);">Loading live reports...</div>
       </div>
 
+      <div class="mode-banner" id="modeBanner"></div>
+
       <div class="map-search">
         <span style="color:var(--muted);font-size:1rem;">🔍</span>
-        <input type="text" placeholder="Search road or area in Coimbatore..."/>
+        <input type="text" id="searchInput" placeholder="Search road or area in Coimbatore..." oninput="searchReports(this.value)"/>
       </div>
 
       <div class="map-controls">
@@ -163,7 +168,7 @@
         <button class="map-ctrl-btn" id="btnBudget" onclick="setView('budget')">💰 Budget Overlay</button>
       </div>
 
-      <div class="legend">
+      <div class="legend" id="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#FF4757;"></div>Critical</div>
         <div class="legend-item"><div class="legend-dot" style="background:#FFA502;"></div>Moderate</div>
         <div class="legend-item"><div class="legend-dot" style="background:#FFD32A;"></div>Minor</div>
@@ -199,18 +204,34 @@
     const pipelineLabels = ['Filed','Identified','Sent','Acknowledged','In Progress','Fixed','Verified'];
 
     const map = L.map('map', { zoomControl: false }).setView([11.0168, 76.9558], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     const markers = {};
     let reports = [];
     let currentFilter = 'all';
+    let heatLayer = null;
+    let budgetLayers = [];
+
+    // ── BUDGET DATA ──
+    const budgetData = [
+      { lat:11.0168, lng:77.0027, name:'Avinashi Road NH-544', dept:'NHAI', contractor:'PNC Infratech Pvt. Ltd.', sanctioned:8.5, spent:3.2, reports:34 },
+      { lat:11.0018, lng:77.0200, name:'Trichy Road NH-83', dept:'NHAI', contractor:'Dilip Buildcon Ltd.', sanctioned:12.3, spent:4.8, reports:47 },
+      { lat:11.0132, lng:76.9570, name:'DB Road RS Puram', dept:'CCMC', contractor:'City Infra Solutions', sanctioned:1.4, spent:0.9, reports:31 },
+      { lat:11.0094, lng:76.9631, name:'Race Course Road', dept:'CCMC', contractor:'Raj Road Constructions', sanctioned:1.2, spent:1.1, reports:12 },
+      { lat:11.0470, lng:76.9990, name:'Sathy Road SH-20', dept:'PWD TN', contractor:'Kumar Constructions', sanctioned:4.8, spent:2.1, reports:38 },
+      { lat:10.9960, lng:76.9760, name:'Ukkadam Bypass', dept:'CCMC', contractor:'Senthil Road Works', sanctioned:3.2, spent:3.2, reports:67 },
+      { lat:11.0780, lng:76.9690, name:'Mettupalayam Road SH-15', dept:'PWD TN', contractor:'TN Road Infra Corp.', sanctioned:3.6, spent:2.1, reports:22 },
+      { lat:10.9850, lng:77.0150, name:'Palladam Road MDR', dept:'TN Highways', contractor:'ARS Infra Projects', sanctioned:1.8, spent:1.8, reports:43 },
+    ];
 
     function createIcon(color) {
       return L.divIcon({
         className: '',
         html: `<div style="width:18px;height:18px;border-radius:50%;background:${color};border:3px solid rgba(255,255,255,0.8);box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>`,
-        iconSize: [18, 18], iconAnchor: [9, 9]
+        iconSize: [18,18], iconAnchor: [9,9]
       });
     }
 
@@ -249,19 +270,13 @@
       try {
         const response = await fetch(`${API_BASE}/api/reports`);
         const data = await response.json();
-
         if (data.success && data.reports && data.reports.length > 0) {
           reports = data.reports.map(r => ({
-            id: r.id,
-            type: r.damage_type || 'Pothole',
-            location: r.location || 'Coimbatore',
-            area: r.location || 'Coimbatore',
-            lat: parseFloat(r.gps_lat) || 11.0168,
-            lng: parseFloat(r.gps_lng) || 76.9558,
-            severity: r.severity || 3,
-            road_type: r.road_type || 'Municipal',
-            authority: r.authority || 'CCMC',
-            status: r.status || 'Filed',
+            id: r.id, type: r.damage_type || 'Pothole',
+            location: r.location || 'Coimbatore', area: r.location || 'Coimbatore',
+            lat: parseFloat(r.gps_lat) || 11.0168, lng: parseFloat(r.gps_lng) || 76.9558,
+            severity: r.severity || 3, road_type: r.road_type || 'Municipal',
+            authority: r.authority || 'CCMC', status: r.status || 'Filed',
             statusCode: r.status_code || 1,
             date: new Date(r.created_at).toLocaleDateString('en-IN'),
             votes: r.upvotes || 0,
@@ -273,7 +288,6 @@
       } catch (e) {
         reports = getDemoReports();
       }
-
       document.getElementById('loadingOverlay').style.display = 'none';
       addMarkersToMap(reports);
       updateStats(reports);
@@ -286,12 +300,10 @@
       if (filter === 'critical') filtered = reports.filter(r => r.severity >= 4);
       if (filter === 'moderate') filtered = reports.filter(r => r.severity === 3);
       if (filter === 'resolved') filtered = reports.filter(r => r.statusCode >= 5);
-
       if (filtered.length === 0) {
         list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">No reports found</div>';
         return;
       }
-
       list.innerHTML = filtered.map(r => `
         <div class="report-card" id="card-${r.id}" onclick="showDetail(reports.find(x=>x.id==='${r.id}')||reports.find(x=>x.id===${r.id}))">
           <div class="report-card-top">
@@ -321,28 +333,53 @@
       renderList(filter);
     }
 
+    function searchReports(query) {
+      if (!query) { renderList(currentFilter); return; }
+      const q = query.toLowerCase();
+      const filtered = reports.filter(r =>
+        r.location.toLowerCase().includes(q) ||
+        r.type.toLowerCase().includes(q) ||
+        r.area.toLowerCase().includes(q)
+      );
+      const list = document.getElementById('reportsList');
+      if (filtered.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">No results found</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(r => `
+        <div class="report-card" onclick="showDetail(reports.find(x=>x.id==='${r.id}')||reports.find(x=>x.id===${r.id}))">
+          <div class="report-card-top">
+            <span class="damage-type">${r.type}</span>
+            <span class="severity-badge sev-${r.severity}">Sev ${r.severity}/5</span>
+          </div>
+          <div class="report-location">📍 ${r.location}</div>
+          <div class="report-meta">
+            <span class="report-status ${getStatusClass(r.statusCode)}">${r.status}</span>
+            <span class="report-votes">👍 ${r.votes}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
     function showDetail(r) {
       if (!r) return;
       document.getElementById('detailType').textContent = r.type;
       document.getElementById('detailLoc').textContent = '📍 ' + r.location;
       document.getElementById('detailSev').textContent = r.severity + '/5';
       document.getElementById('detailSev').style.color = r.color;
-      document.getElementById('detailRoad').textContent = r.road_type || r.roadType || '—';
+      document.getElementById('detailRoad').textContent = r.road_type || '—';
       document.getElementById('detailAuth').textContent = r.authority || '—';
       document.getElementById('detailDate').textContent = r.date;
-
       const pipe = document.getElementById('detailPipeline');
       pipe.innerHTML = pipelineSteps.map((s, i) => {
         const isDone = i < r.statusCode - 1;
         const isCurrent = i === r.statusCode - 1;
         const cls = isDone ? 'done' : isCurrent ? 'current' : '';
-        const line = i < pipelineSteps.length - 1 ? `<div class="pm-line ${isDone ? 'done' : ''}"></div>` : '';
+        const line = i < pipelineSteps.length - 1 ? `<div class="pm-line ${isDone?'done':''}"></div>` : '';
         return `<div class="pm-step ${cls}" title="${pipelineLabels[i]}">${s}</div>${line}`;
       }).join('');
-
       document.getElementById('detailPanel').classList.add('visible');
       map.flyTo([r.lat, r.lng], 15, { duration: 1 });
-
       document.querySelectorAll('.report-card').forEach(c => c.classList.remove('selected'));
       const card = document.getElementById('card-' + r.id);
       if (card) { card.classList.add('selected'); card.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
@@ -350,98 +387,120 @@
 
     function closeDetail() { document.getElementById('detailPanel').classList.remove('visible'); }
 
-    let heatLayer = null;
-let budgetMarkers = [];
+    // ── SET VIEW — All / Heatmap / Budget ──
+    function setView(mode) {
+      document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
 
-function setView(mode) {
-  document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+      // Clean up previous layers
+      if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+      budgetLayers.forEach(l => map.removeLayer(l));
+      budgetLayers = [];
 
-  // Remove existing heat layer
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+      // Show/hide pins
+      Object.values(markers).forEach(m => {
+        if (mode === 'all') m.addTo(map);
+        else map.removeLayer(m);
+      });
 
-  // Remove budget markers
-  budgetMarkers.forEach(m => map.removeLayer(m));
-  budgetMarkers = [];
+      const banner = document.getElementById('modeBanner');
+      const legend = document.getElementById('legend');
 
-  // Show/hide normal markers
-  Object.values(markers).forEach(m => {
-    if (mode === 'all') { m.addTo(map); }
-    else { map.removeLayer(m); }
-  });
+      if (mode === 'all') {
+        banner.classList.remove('visible');
+        legend.innerHTML = `
+          <div class="legend-item"><div class="legend-dot" style="background:#FF4757;"></div>Critical</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFA502;"></div>Moderate</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFD32A;"></div>Minor</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#00E87A;"></div>Resolved</div>
+        `;
 
-  if (mode === 'heat') {
-    // Build heatmap from report locations
-    const heatData = reports.map(r => {
-      const intensity = r.severity / 5;
-      return [r.lat, r.lng, intensity];
-    });
+      } else if (mode === 'heat') {
+        // Build heatmap from report coordinates + severity
+        const heatPoints = reports.map(r => [r.lat, r.lng, r.severity / 5]);
 
-    heatLayer = L.heatLayer(heatData, {
-      radius: 35,
-      blur: 25,
-      maxZoom: 17,
-      gradient: {
-        0.0: '#00E87A',
-        0.3: '#FFD32A',
-        0.6: '#FFA502',
-        1.0: '#FF4757'
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 40,
+          blur: 30,
+          maxZoom: 17,
+          max: 1.0,
+          gradient: {
+            0.0: '#00E87A',
+            0.3: '#FFD32A',
+            0.6: '#FFA502',
+            1.0: '#FF4757'
+          }
+        }).addTo(map);
+
+        banner.textContent = '🔥 Heatmap — Red zones = most dangerous areas in Coimbatore';
+        banner.classList.add('visible');
+
+        legend.innerHTML = `
+          <div class="legend-item"><div class="legend-dot" style="background:#FF4757;border-radius:3px;"></div>Danger Zone</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFA502;border-radius:3px;"></div>High Risk</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFD32A;border-radius:3px;"></div>Moderate</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#00E87A;border-radius:3px;"></div>Low Risk</div>
+        `;
+
+      } else if (mode === 'budget') {
+        // Show budget circles for each road
+        budgetData.forEach(road => {
+          const gap = (road.sanctioned - road.spent).toFixed(1);
+          const vfm = ((road.spent / road.sanctioned) * 10 / Math.max(road.reports / 10, 1)).toFixed(1);
+          const color = road.reports > 40 ? '#FF4757' : road.reports > 20 ? '#FFA502' : '#00E87A';
+          const radius = road.reports * 9;
+
+          const circle = L.circle([road.lat, road.lng], {
+            color: color, fillColor: color,
+            fillOpacity: 0.18, weight: 2, radius: radius
+          }).addTo(map);
+
+          circle.bindPopup(`
+            <div style="font-family:'DM Sans',sans-serif;min-width:210px;padding:.2rem;">
+              <div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;">${road.name}</div>
+              <div style="font-size:.75rem;color:#666;margin-bottom:.6rem;">Dept: ${road.dept} · ${road.contractor}</div>
+              <div style="font-size:.8rem;">💰 Sanctioned: <strong>₹${road.sanctioned} Cr</strong></div>
+              <div style="font-size:.8rem;">📤 Spent: <strong>₹${road.spent} Cr</strong></div>
+              <div style="font-size:.8rem;color:#FF4757;">⚠️ Gap: <strong>₹${gap} Cr</strong></div>
+              <div style="font-size:.8rem;color:#FF4757;">📍 Active Reports: <strong>${road.reports}</strong></div>
+              <div style="margin-top:.5rem;font-size:.75rem;background:${color}22;border:1px solid ${color}44;padding:.3rem .6rem;border-radius:6px;color:${color};">
+                VFM Score: ${vfm}/10
+              </div>
+            </div>
+          `);
+
+          // Add label marker
+          const label = L.divIcon({
+            className: '',
+            html: `<div style="background:rgba(13,30,53,0.9);border:1px solid ${color};color:${color};padding:2px 6px;border-radius:6px;font-size:10px;font-weight:600;white-space:nowrap;">₹${road.sanctioned}Cr · ${road.reports} reports</div>`,
+            iconAnchor: [0, 0]
+          });
+          const labelMarker = L.marker([road.lat + 0.003, road.lng], { icon: label }).addTo(map);
+
+          budgetLayers.push(circle);
+          budgetLayers.push(labelMarker);
+        });
+
+        banner.textContent = '💰 Budget Overlay — Circle size = damage reports. Click any circle for details.';
+        banner.classList.add('visible');
+        map.setView([11.0168, 76.9558], 12);
+
+        legend.innerHTML = `
+          <div class="legend-item"><div class="legend-dot" style="background:#FF4757;"></div>40+ reports</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFA502;"></div>20-40 reports</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#00E87A;"></div>Under 20</div>
+          <div style="font-size:.68rem;color:var(--muted);">Circle size = damage density</div>
+        `;
       }
-    }).addTo(map);
-
-  } else if (mode === 'budget') {
-    // Budget overlay — show road spending circles
-    const budgetData = [
-      { lat:11.0168, lng:77.0027, name:'Avinashi Road NH-544', sanctioned:8.5, spent:3.2, reports:34 },
-      { lat:11.0018, lng:77.0200, name:'Trichy Road NH-83', sanctioned:12.3, spent:4.8, reports:47 },
-      { lat:11.0132, lng:76.9570, name:'DB Road RS Puram', sanctioned:1.4, spent:0.9, reports:31 },
-      { lat:11.0094, lng:76.9631, name:'Race Course Road', sanctioned:1.2, spent:1.1, reports:12 },
-      { lat:11.0470, lng:76.9990, name:'Sathy Road SH-20', sanctioned:4.8, spent:2.1, reports:38 },
-      { lat:10.9960, lng:76.9760, name:'Ukkadam Bypass', sanctioned:3.2, spent:3.2, reports:67 },
-      { lat:11.0780, lng:76.9690, name:'Mettupalayam Road', sanctioned:3.6, spent:2.1, reports:22 },
-      { lat:10.9850, lng:77.0150, name:'Palladam Road', sanctioned:1.8, spent:1.8, reports:43 },
-    ];
-
-    budgetData.forEach(road => {
-      const gap = road.sanctioned - road.spent;
-      const vfm = ((road.spent / road.sanctioned) * 10 / (road.reports / 10)).toFixed(1);
-      const color = road.reports > 40 ? '#FF4757' : road.reports > 20 ? '#FFA502' : '#00E87A';
-      const radius = road.reports * 8;
-
-      const circle = L.circle([road.lat, road.lng], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.15,
-        weight: 2,
-        radius: radius
-      }).addTo(map);
-
-      circle.bindPopup(`
-        <div style="font-family:'DM Sans',sans-serif;min-width:200px;">
-          <strong style="font-size:.9rem;">${road.name}</strong><br/>
-          <hr style="border-color:#eee;margin:.4rem 0;"/>
-          💰 Sanctioned: <strong>₹${road.sanctioned}Cr</strong><br/>
-          📤 Spent: <strong>₹${road.spent}Cr</strong><br/>
-          ⚠️ Gap: <strong style="color:#FF4757;">₹${gap.toFixed(1)}Cr</strong><br/>
-          📍 Active Reports: <strong style="color:#FF4757;">${road.reports}</strong>
-        </div>
-      `);
-
-      budgetMarkers.push(circle);
-    });
-
-    map.setView([11.0168, 76.9558], 12);
-  }
-}
+    }
 
     function upvoteReport() { alert('👍 Upvoted! This complaint gets higher priority.'); }
     function shareReport() {
       if (navigator.share) { navigator.share({ title:'RoadWatch Report', text:'Check this road damage report!', url:window.location.href }); }
-      else { alert('📤 Share link copied!'); }
+      else { alert('📤 Share link copied! Share on WhatsApp to escalate.'); }
     }
     function verifyReport() { alert('✅ Opening verification camera...'); }
 
-    // Start loading
     loadReports();
   </script>
   <script src="connect.js"></script>
