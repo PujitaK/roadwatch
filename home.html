@@ -68,9 +68,9 @@
     .status-verified { background:rgba(0,232,122,.2); color:var(--green); border:1px solid rgba(0,232,122,.3); }
     .report-time { font-size:.68rem; color:var(--muted); }
     .report-votes { font-size:.72rem; color:var(--muted); display:flex; align-items:center; gap:.3rem; }
-    #map { flex:1; z-index:1; }
-    .leaflet-tile { filter: brightness(0.85); }
-    .leaflet-container { background:#07111F; }
+    #map { flex:1; z-index:1; min-height:500px; width:100%; }
+    .leaflet-tile { filter: none; }
+    .leaflet-container { background:#CBD5E0; }
     .detail-panel { position:absolute; bottom:1.5rem; right:1.5rem; width:320px; z-index:800; background:var(--navy2); border:1px solid var(--border); border-radius:20px; padding:1.5rem; transform:translateY(20px); opacity:0; transition:all .3s; pointer-events:none; box-shadow:0 20px 60px rgba(0,0,0,.5); }
     .detail-panel.visible { transform:translateY(0); opacity:1; pointer-events:all; }
     .detail-close { position:absolute; top:1rem; right:1rem; background:var(--card); border:1px solid var(--border); color:var(--muted); width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.8rem; transition:all .2s; }
