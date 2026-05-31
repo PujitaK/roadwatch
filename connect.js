@@ -106,25 +106,25 @@ let chatHistory = [];
 
 async function sendToRoadBot(userMessage) {
     try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
+        const NETLIFY_URL = "https://YOUR-NETLIFY-SITE.netlify.app";
+        const response = await fetch(`${NETLIFY_URL}/.netlify/functions/roadbot`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": window.ANTHROPIC_KEY || "",
-                "anthropic-version": "2023-06-01",
-                "anthropic-dangerous-direct-browser-access": "true"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: "claude-haiku-4-5",
-                max_tokens: 300,
-                system: "You are RoadBot, AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu. Answer questions about road damage, budgets, authorities. NHAI handles NH roads, PWD handles SH roads, CCMC handles municipal roads. Keep answers under 80 words. Be helpful and direct.",
-                messages: [{ role: "user", content: userMessage }]
+                message: userMessage,
+                history: chatHistory
             })
         });
         const data = await response.json();
-        return data.content[0].text;
+        if (data.reply) {
+            chatHistory.push({ role: "user", content: userMessage });
+            chatHistory.push({ role: "assistant", content: data.reply });
+            if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+            return data.reply;
+        }
+        return "Sorry, could not process that. Please try again!";
     } catch (error) {
-        return "Sorry, I could not process that. Please try again!";
+        return "RoadBot is unavailable right now. Please try again!";
     }
 }
 
