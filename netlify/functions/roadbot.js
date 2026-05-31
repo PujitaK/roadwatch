@@ -48,7 +48,7 @@ You help citizens with:
 - Budget info: Rs 47.3 Crore sanctioned for Coimbatore roads in 2025-26
 - Complaint tracking and status updates
 Keep answers short (under 80 words). Be warm, helpful and direct.
-Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).`
+Reply in English by default. Only switch to Tamil, Hindi, or Telugu if the user explicitly writes in that language first.`
           },
           ...history.slice(-6).map(h => ({
             role: h.role === 'assistant' ? 'assistant' : 'user',
