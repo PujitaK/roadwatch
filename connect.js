@@ -100,13 +100,14 @@ async function upvoteReport(trackingId) {
 }
 
 // ============================================================
-// 7. ROADBOT — AUTO RETRY ON SERVER SLEEP
+// 7. ROADBOT — SEND MESSAGE TO NETLIFY FUNCTION
 // ============================================================
 let chatHistory = [];
 
 async function sendToRoadBot(userMessage) {
     try {
-        const NETLIFY_URL = "quiet-dragon-2f91d7.netlify.app";
+        // FIX: Added https:// — was missing, causing silent failure
+        const NETLIFY_URL = "https://quiet-dragon-2f91d7.netlify.app";
         const response = await fetch(`${NETLIFY_URL}/.netlify/functions/roadbot`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -115,6 +116,12 @@ async function sendToRoadBot(userMessage) {
                 history: chatHistory
             })
         });
+
+        if (!response.ok) {
+            console.error("RoadBot HTTP error:", response.status);
+            return "RoadBot is unavailable right now. Please try again!";
+        }
+
         const data = await response.json();
         if (data.reply) {
             chatHistory.push({ role: "user", content: userMessage });
@@ -124,6 +131,7 @@ async function sendToRoadBot(userMessage) {
         }
         return "Sorry, could not process that. Please try again!";
     } catch (error) {
+        console.error("RoadBot fetch error:", error);
         return "RoadBot is unavailable right now. Please try again!";
     }
 }
