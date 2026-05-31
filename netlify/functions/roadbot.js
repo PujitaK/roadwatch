@@ -20,7 +20,7 @@ exports.handler = async (event) => {
       history = body.history || [];
     } catch (e) {}
 
-    const apiKey = process.env.ANTHROPIC_KEY;
+    const apiKey = process.env.GROQ_KEY;
     if (!apiKey) {
       return {
         statusCode: 200,
@@ -29,35 +29,40 @@ exports.handler = async (event) => {
       };
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama3-8b-8192',
         max_tokens: 300,
-        system: `You are RoadBot, a friendly AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu, India.
+        messages: [
+          {
+            role: 'system',
+            content: `You are RoadBot, a friendly AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu, India.
 You help citizens with:
 - Reporting road damage (potholes, cracks, waterlogging, broken dividers)
 - Road authority info: NHAI handles National Highway roads, PWD handles State Highway roads, CCMC handles city/municipal roads
 - Budget info: Rs 47.3 Crore sanctioned for Coimbatore roads in 2025-26
 - Complaint tracking and status updates
 Keep answers short (under 80 words). Be warm, helpful and direct.
-Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).`,
-        messages: [
-          ...history.slice(-6),
+Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).`
+          },
+          ...history.slice(-6).map(h => ({
+            role: h.role === 'assistant' ? 'assistant' : 'user',
+            content: h.content
+          })),
           { role: 'user', content: message }
         ]
       })
     });
 
     const data = await response.json();
-    console.log('Anthropic response:', JSON.stringify(data));
+    console.log('Groq response:', JSON.stringify(data));
 
-    const reply = data?.content?.[0]?.text;
+    const reply = data?.choices?.[0]?.message?.content;
     if (reply) {
       return {
         statusCode: 200,
