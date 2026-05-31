@@ -81,8 +81,8 @@
     /* OTP */
     .otp-section { display:none; }
     .otp-section.active { display:block; animation:fadeUp .3s ease; }
-    .otp-inputs { display:flex; gap:.6rem; justify-content:center; margin:1.5rem 0; }
-    .otp-input { width:52px; height:56px; background:var(--navy3); border:2px solid var(--border); border-radius:12px; color:var(--white); font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; text-align:center; outline:none; transition:border-color .2s; }
+    .otp-inputs { display:flex; gap:.4rem; justify-content:center; margin:1.5rem 0; }
+    .otp-input { width:44px; height:52px; background:var(--navy3); border:2px solid var(--border); border-radius:12px; color:var(--white); font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; text-align:center; outline:none; transition:border-color .2s; }
     .otp-input:focus { border-color:var(--green); }
     .otp-input.filled { border-color:rgba(0,232,122,.4); background:rgba(0,232,122,.05); }
     .resend-row { text-align:center; font-size:.78rem; color:var(--muted); margin-top:.8rem; }
@@ -162,7 +162,7 @@
       <!-- OTP STEP -->
       <div class="otp-section" id="citizen-otp-step">
         <div class="form-title">Check your email 📧</div>
-        <div class="form-sub" id="otp-sub-text">We sent a 6-digit code to your email.</div>
+        <div class="form-sub" id="otp-sub-text">We sent an 8-digit code to your email.</div>
 
         <div class="otp-inputs">
           <input class="otp-input" type="text" maxlength="1" id="otp1" oninput="otpInput(this,null,'otp2')"/>
@@ -170,7 +170,9 @@
           <input class="otp-input" type="text" maxlength="1" id="otp3" oninput="otpInput(this,'otp2','otp4')"/>
           <input class="otp-input" type="text" maxlength="1" id="otp4" oninput="otpInput(this,'otp3','otp5')"/>
           <input class="otp-input" type="text" maxlength="1" id="otp5" oninput="otpInput(this,'otp4','otp6')"/>
-          <input class="otp-input" type="text" maxlength="1" id="otp6" oninput="otpInput(this,'otp5',null)"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp6" oninput="otpInput(this,'otp5','otp7')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp7" oninput="otpInput(this,'otp6','otp8')"/>
+          <input class="otp-input" type="text" maxlength="1" id="otp8" oninput="otpInput(this,'otp7',null)"/>
         </div>
 
         <button class="btn-primary" id="verify-otp-btn" onclick="verifyOTP()" disabled>
@@ -325,7 +327,7 @@
       document.getElementById('citizen-email-step').style.display = 'none';
       document.getElementById('citizen-otp-step').classList.add('active');
       document.getElementById('otp-sub-text').innerHTML =
-        `We sent a 6-digit code to <strong style="color:var(--white);">${userEmail}</strong>`;
+        `We sent an 8-digit code to <strong style="color:var(--white);">${userEmail}</strong>`;
       document.getElementById('otp1').focus();
       startTimer(30);
       btn.textContent = 'Send OTP →';
@@ -343,11 +345,11 @@
 
     function checkOTPComplete() {
       const otp = getOTPValue();
-      document.getElementById('verify-otp-btn').disabled = otp.length < 6;
+      document.getElementById('verify-otp-btn').disabled = otp.length < 8;
     }
 
     function getOTPValue() {
-      return ['otp1','otp2','otp3','otp4','otp5','otp6']
+      return ['otp1','otp2','otp3','otp4','otp5','otp6','otp7','otp8']
         .map(id => document.getElementById(id).value).join('');
     }
 
@@ -498,7 +500,7 @@
     }
 
     function resendOTP() {
-      ['otp1','otp2','otp3','otp4','otp5','otp6'].forEach(id => {
+      ['otp1','otp2','otp3','otp4','otp5','otp6','otp7','otp8'].forEach(id => {
         const el = document.getElementById(id);
         el.value = ''; el.classList.remove('filled');
       });
