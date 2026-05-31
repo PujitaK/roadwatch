@@ -20,7 +20,7 @@ exports.handler = async (event) => {
       history = body.history || [];
     } catch (e) {}
 
-    const apiKey = process.env.GEMINI_KEY;
+    const apiKey = process.env.ANTHROPIC_KEY;
     if (!apiKey) {
       return {
         statusCode: 200,
@@ -29,44 +29,35 @@ exports.handler = async (event) => {
       };
     }
 
-    // Build Gemini conversation history
-    const geminiHistory = history.slice(-6).map(h => ({
-      role: h.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: h.content }]
-    }));
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: `You are RoadBot, a friendly AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu, India.
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: `You are RoadBot, a friendly AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu, India.
 You help citizens with:
 - Reporting road damage (potholes, cracks, waterlogging, broken dividers)
 - Road authority info: NHAI handles National Highway roads, PWD handles State Highway roads, CCMC handles city/municipal roads
 - Budget info: Rs 47.3 Crore sanctioned for Coimbatore roads in 2025-26
 - Complaint tracking and status updates
 Keep answers short (under 80 words). Be warm, helpful and direct.
-Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).` }]
-          },
-          contents: [
-            ...geminiHistory,
-            { role: 'user', parts: [{ text: message }] }
-          ],
-          generationConfig: {
-            maxOutputTokens: 300,
-            temperature: 0.7
-          }
-        })
-      }
-    );
+Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).`,
+        messages: [
+          ...history.slice(-6),
+          { role: 'user', content: message }
+        ]
+      })
+    });
 
     const data = await response.json();
-    console.log('Gemini response:', JSON.stringify(data));
+    console.log('Anthropic response:', JSON.stringify(data));
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply = data?.content?.[0]?.text;
     if (reply) {
       return {
         statusCode: 200,
