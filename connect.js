@@ -106,7 +106,7 @@ let chatHistory = [];
 
 async function sendToRoadBot(userMessage) {
     try {
-        const NETLIFY_URL = "https://quiet-dragon-2f91d7.netlify.app";
+        const NETLIFY_URL = "https://roadwatchbot.netlify.app";
         const response = await fetch(`${NETLIFY_URL}/.netlify/functions/roadbot`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
