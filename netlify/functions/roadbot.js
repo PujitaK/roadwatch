@@ -12,29 +12,59 @@ exports.handler = async (event) => {
     };
   }
 
-  try {
-    const body    = JSON.parse(event.body || '{}');
-    const message = body.message || 'Hello';
-    const history = body.history || [];
+  // Only allow POST
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ reply: 'Method not allowed' })
+    };
+  }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+  try {
+    // --- Parse body safely ---
+    let message = 'Hello';
+    let history = [];
+    try {
+      const body = JSON.parse(event.body || '{}');
+      message = body.message || 'Hello';
+      history = body.history || [];
+    } catch (parseErr) {
+      console.error('Body parse error:', parseErr.message);
+    }
+
+    console.log('RoadBot received message:', message);
+
+    // --- Check API key exists ---
+    const apiKey = process.env.ANTHROPIC_KEY;
+    if (!apiKey) {
+      console.error('ANTHROPIC_KEY env variable is missing!');
+      return {
+        statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: 'Configuration error: API key not set. Please contact admin.' })
+      };
+    }
+
+    // --- Call Anthropic API ---
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 300,
-        system: `You are RoadBot, AI assistant for RoadWatch — road safety platform for Coimbatore, Tamil Nadu.
-Help citizens with:
+        system: `You are RoadBot, a friendly AI assistant for RoadWatch — a road safety platform for Coimbatore, Tamil Nadu, India.
+You help citizens with:
 - Reporting road damage (potholes, cracks, waterlogging, broken dividers)
-- Road authority info: NHAI handles NH roads, PWD handles SH roads, CCMC handles municipal roads
-- Budget transparency: ₹47.3Cr sanctioned for Coimbatore roads 2025-26
+- Road authority info: NHAI handles National Highway roads, PWD handles State Highway roads, CCMC handles city/municipal roads
+- Budget info: Rs 47.3 Crore sanctioned for Coimbatore roads in 2025-26
 - Complaint tracking and status updates
-Keep answers under 80 words. Be helpful and direct.
-Reply in same language as user (Tamil, Hindi, Telugu or English).`,
+Keep answers short (under 80 words). Be warm, helpful and direct.
+Always reply in the same language the user writes in (Tamil, Hindi, Telugu or English).`,
         messages: [
           ...history.slice(-6),
           { role: 'user', content: message }
@@ -42,34 +72,49 @@ Reply in same language as user (Tamil, Hindi, Telugu or English).`,
       })
     });
 
-    const data = await response.json();
-    console.log('Anthropic response:', JSON.stringify(data));
+    console.log('Anthropic status:', anthropicResponse.status);
 
-    if (data && data.content && data.content[0]) {
+    // --- Read response ---
+    const responseText = await anthropicResponse.text();
+    console.log('Anthropic raw response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (jsonErr) {
+      console.error('Failed to parse Anthropic response as JSON:', responseText);
       return {
         statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reply: data.content[0].text })
-      };
-    } else {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reply: 'Sorry, I could not process that. Please try again!' })
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: 'RoadBot got an unexpected response. Please try again!' })
       };
     }
-  } catch (error) {
-    console.error('RoadBot error:', error);
+
+    // --- Extract reply ---
+    if (data && data.content && data.content[0] && data.content[0].text) {
+      console.log('RoadBot reply:', data.content[0].text);
+      return {
+        statusCode: 200,
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: data.content[0].text })
+      };
+    }
+
+    // --- Anthropic returned an error object ---
+    console.error('Anthropic error object:', JSON.stringify(data));
+    const errMsg = (data.error && data.error.message) ? data.error.message : JSON.stringify(data);
     return {
-      statusCode: 500,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: error.message })
+      statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: 'API error: ' + errMsg })
+    };
+
+  } catch (error) {
+    console.error('RoadBot handler crashed:', error.message, error.stack);
+    return {
+      statusCode: 200,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: 'RoadBot crashed: ' + error.message })
     };
   }
 };
